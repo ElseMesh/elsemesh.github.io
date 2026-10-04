@@ -1,12 +1,31 @@
-# ZeroTier test LAN for ElseMesh
+# ZeroTier networking for ElseMesh
 
-## Network status
+## Current test LAN
 
-The current public test LAN is ZeroTier network `632ea2908569fc9e`, named
-`xellent` in ZeroTier Central. It is public, has 6PLANE enabled, and its managed
-LAN route is `10.205.192.0/24`. Each member also receives its own network-scoped
-6PLANE IPv6 address. Use the address reported for that member by Central or the
-local ZeroTier client; do not derive peer addresses from the node ID yourself.
+The existing public test LAN is ZeroTier network `632ea2908569fc9e`, named
+`xellent` in ZeroTier Central. It has 6PLANE enabled and its IPv4 managed route
+is `10.205.192.0/24`. Keep this network and its rules unchanged; it is a test
+network, not the planned ElseMesh network. Each member receives its own
+network-scoped 6PLANE IPv6 address. Use the address reported for that member by
+Central or the local ZeroTier client; do not derive peer addresses from the node
+ID yourself.
+
+## Dedicated ElseMesh network (not created yet)
+
+Create a separate public network named `ElseMesh World Network`, with 6PLANE
+enabled and IPv4 auto-assignment spanning `10.0.0.0/8` (usable host range
+`10.0.0.1` through `10.255.255.254`). Record its network ID here after creation.
+The `/8` is intended for world daemon overlay addresses. It overlaps common
+private networks, so do not install a broad `10.0.0.0/8` route into host routing
+tables by default. Verify libzt/worldd can use the assigned addresses without
+stealing traffic for a user's existing `10.x` LAN; if a host route is required,
+configure it narrowly and document the platform-specific behavior.
+
+The new network has not been created: the locally stored Legacy Central token
+returned HTTP 403 on 2026-10-04, so no network-creation API request succeeded.
+Do not use the existing `xellent` network as a substitute. After creation,
+replace `<ELSEMESH_NETWORK_ID>` in the join and daemon commands below with the
+new ID.
 
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
@@ -41,10 +60,10 @@ clients are intentionally connecting to it over ZeroTier.
 Public membership means anyone who knows this network ID may join; application
 identity signatures and world permissions must still be enforced by ElseMesh.
 
-## Joining a Linux host
+## Joining a Linux host to the test LAN
 
 Install and start ZeroTier One using the package for the host, then join the
-public test LAN:
+existing public test LAN only for testing:
 
 ```sh
 sudo zerotier-cli join 632ea2908569fc9e
@@ -107,7 +126,7 @@ At runtime, make `libzt.so` available to the dynamic linker (for example with
 `LD_LIBRARY_PATH`) and start `worldd` with the network ID:
 
 ```sh
-worldd --zerotier-network 632ea2908569fc9e --data /path/to/private/worldd-data
+worldd --zerotier-network <ELSEMESH_NETWORK_ID> --data /path/to/private/worldd-data
 ```
 
 The embedded node identity is persisted in the `zerotier` subdirectory of the
