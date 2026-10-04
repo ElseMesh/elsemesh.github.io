@@ -39,6 +39,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+const defaultZeroTierNetworkID = "e3918db4832a3056"
+
 type libztRuntime struct {
 	networkID    uint64
 	nodeID       uint64
@@ -93,13 +95,24 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 	for time.Now().Before(deadline) {
 		switch int(C.zts_net_get_status(C.uint64_t(netID))) {
 		case 1:
+			if int(C.zts_addr_is_assigned(C.uint64_t(netID), C.ZTS_AF_INET6)) != 1 {
+				time.Sleep(250 * time.Millisecond)
+				continue
+			}
 			var raw [C.ZTS_IP_MAX_STR_LEN]C.char
-			if code := int(C.zts_addr_compute_6plane_str(C.uint64_t(netID), C.uint64_t(nodeID), &raw[0], C.uint(C.ZTS_IP_MAX_STR_LEN))); code != 0 {
-				return nil, fmt.Errorf("compute 6PLANE address failed (%d)", code)
+			if code := int(C.zts_addr_get_str(C.uint64_t(netID), C.ZTS_AF_INET6, &raw[0], C.uint(C.ZTS_IP_MAX_STR_LEN))); code != 0 {
+				return nil, fmt.Errorf("read assigned ZeroTier IPv6 address failed (%d)", code)
 			}
 			address := net.ParseIP(C.GoString(&raw[0])).To16()
 			if address == nil {
-				return nil, errors.New("libzt returned an invalid 6PLANE address")
+				return nil, errors.New("libzt returned an invalid assigned ZeroTier IPv6 address")
+			}
+			if code := int(C.zts_addr_compute_6plane_str(C.uint64_t(netID), C.uint64_t(nodeID), &raw[0], C.uint(C.ZTS_IP_MAX_STR_LEN))); code != 0 {
+				return nil, fmt.Errorf("compute expected 6PLANE address failed (%d)", code)
+			}
+			expected := net.ParseIP(C.GoString(&raw[0])).To16()
+			if expected == nil || !address.Equal(expected) {
+				return nil, errors.New("assigned ZeroTier IPv6 address does not match this network's 6PLANE address")
 			}
 			mask := net.CIDRMask(40, 128)
 			runtime := &libztRuntime{networkID: netID, nodeID: nodeID, address: address, prefix: net.IPNet{IP: address.Mask(mask), Mask: mask}, listener: -1}

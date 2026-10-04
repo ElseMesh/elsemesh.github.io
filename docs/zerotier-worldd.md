@@ -5,37 +5,39 @@
 The existing public test LAN is ZeroTier network `632ea2908569fc9e`, named
 `xellent` in ZeroTier Central. It has 6PLANE enabled and its IPv4 managed route
 is `10.205.192.0/24`. Keep this network and its rules unchanged; it is a test
-network, not the planned ElseMesh network. Each member receives its own
+network, separate from the dedicated ElseMesh network. Each member receives its own
 network-scoped 6PLANE IPv6 address. Use the address reported for that member by
 Central or the local ZeroTier client; do not derive peer addresses from the node
 ID yourself.
 
-## Dedicated ElseMesh network (not created yet)
+## Dedicated ElseMesh network
 
-Create a separate public network named `ElseMesh World Network`, with 6PLANE
-enabled and IPv4 auto-assignment spanning `10.0.0.0/8` (usable host range
-`10.0.0.1` through `10.255.255.254`). Record its network ID here after creation.
-The `/8` is intended for world daemon overlay addresses. It overlaps common
-private networks, so do not install a broad `10.0.0.0/8` route into host routing
-tables by default. Verify libzt/worldd can use the assigned addresses without
-stealing traffic for a user's existing `10.x` LAN; if a host route is required,
-configure it narrowly and document the platform-specific behavior.
+The owner created ZeroTier network `e3918db4832a3056` in Central for ElseMesh.
+The owner reports a `/16` IPv4 range and 6PLANE enabled. The exact IPv4 range,
+public/private setting, managed route, and flow rules could not be read back
+from Central on 2026-10-04 because the locally stored API token returned HTTP
+403. ZeroTier's [Legacy API examples](https://docs.zerotier.com/api-central-examples/)
+show that member listings expose a `physicalAddress` field, but the docs do not
+guarantee when Central populates it. Do not treat a successful local join or a
+6PLANE address as proof that Central has a currently observed public endpoint
+for that member.
 
-The new network has not been created: the locally stored Legacy Central token
-returned HTTP 403 on 2026-10-04, so no network-creation API request succeeded.
-Do not use the existing `xellent` network as a substitute. After creation,
-replace `<ELSEMESH_NETWORK_ID>` in the join and daemon commands below with the
-new ID.
+`worldd` built with `-tags zerotier` now defaults to this network. The
+`--zerotier-network` flag can override it for testing; use the existing
+`xellent` network only when explicitly testing that separate `/24` LAN. After
+Central API access is restored, record the exact IPv4 CIDR and confirm its
+managed route and flow rules here. Verify that the `/16` route does not capture
+traffic intended for a user's existing private network.
 
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
 (mode `0600`), do not copy it into a repository or world/client configuration,
-and do not include it in command output or logs. On 2026-10-03, the locally
-available token returned HTTP 403 for read-only requests to both the network
-endpoint and the network-list endpoint. Central configuration could therefore
-not be revalidated through that token; a 403 does not establish that the
-network settings changed. Generate a working Legacy API token in Central and
-replace the local file without sharing the token in chat or source control.
+and do not include it in command output or logs. The locally available token
+returned HTTP 403 for read-only requests to the documented Legacy API endpoint
+on 2026-10-04, as it did in the earlier 2026-10-03 check. This points to a
+credential/account access problem; it does not establish that the network
+settings changed. Generate a working Legacy API token in Central and replace
+the local file without sharing the token in chat or source control.
 
 The last recorded flow-rule inspection found TCP destination port `42901` in
 the allow list for `worldd`'s libp2p listener, while the existing final UDP
@@ -63,7 +65,7 @@ identity signatures and world permissions must still be enforced by ElseMesh.
 ## Joining a Linux host to the test LAN
 
 Install and start ZeroTier One using the package for the host, then join the
-existing public test LAN only for testing:
+existing `xellent` public test LAN only when explicitly testing that network:
 
 ```sh
 sudo zerotier-cli join 632ea2908569fc9e
@@ -123,10 +125,11 @@ go build -tags zerotier -o worldd ./worldd
 ```
 
 At runtime, make `libzt.so` available to the dynamic linker (for example with
-`LD_LIBRARY_PATH`) and start `worldd` with the network ID:
+`LD_LIBRARY_PATH`). A build with `-tags zerotier` defaults to network
+`e3918db4832a3056`; the flag is shown explicitly here for clarity:
 
 ```sh
-worldd --zerotier-network <ELSEMESH_NETWORK_ID> --data /path/to/private/worldd-data
+worldd --zerotier-network e3918db4832a3056 --data /path/to/private/worldd-data
 ```
 
 The embedded node identity is persisted in the `zerotier` subdirectory of the
@@ -151,14 +154,15 @@ browser peer path.
 
 ## Remaining validation
 
-On 2026-10-03, `worldd` was built for Linux amd64 against the existing libzt
-build. A disposable daemon profile joined the public test LAN, reported a
-stable libzt node ID and its 6PLANE IPv6 address, and included that address in
-its advertised TCP peer addresses. This exercise also found and fixed a
-startup-order bug: `zts_node_start()` is asynchronous, so `worldd` now waits
-for the libzt node to come online before calling `zts_net_join()`. The daemon
-was stopped after the smoke check. This verifies one local node's membership
-and address announcement only; peer traffic across the overlay, separate NATs,
-browser relay access while Central is unavailable, and an Android/Termux libzt
-build plus Flip7 renderer check remain unverified. Do not treat a successful
-Linux build or one-node join as proof of those deployment paths.
+On 2026-10-04, a Linux amd64 `worldd` build joined the dedicated ElseMesh
+network using its default ID. Its disposable node ID was `3af4fd5d50`; the
+daemon reported 6PLANE address `fc60:bbbd:e23a:f4fd:5d50::1` and advertised it
+for TCP. A later follow-up run with the same profile timed out before the node
+reached ZeroTier online state, so that attempt did not test Central visibility
+or peer traffic. The successful run proves one local join and address
+announcement only, not a direct public endpoint, cross-network reachability,
+or successful portal traversal. The disposable daemon is stopped, so the node
+is currently offline. Peer traffic across the overlay, separate NATs, browser
+relay access while Central is unavailable, and an Android/Termux libzt build
+plus Flip7 renderer check remain unverified. Do not treat a successful Linux
+build or one-node join as proof of those deployment paths.

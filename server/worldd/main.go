@@ -112,7 +112,7 @@ func run() error {
 	importNodeKey := flag.String("import-node-key", "", "install a 0600 private identity key if node.key does not exist, then exit")
 	worldName := flag.String("world-name", "My ThruHold", "create a local starter world when none is supplied")
 	listenPort := flag.Int("p2p-port", 42901, "libp2p TCP and QUIC listen port")
-	zeroTierNetwork := flag.String("zerotier-network", "", "optional ZeroTier network ID to join through libzt (requires a zerotier build)")
+	zeroTierNetwork := flag.String("zerotier-network", defaultZeroTierNetworkID, "ZeroTier network ID to join through libzt (requires a zerotier build)")
 	httpAddress := flag.String("http", "127.0.0.1:5200", "HTTP/WebSocket gateway listen address; place behind TLS for public browser access")
 	webTransportAddress := flag.String("webtransport", "", "optional WebTransport HTTP/3 UDP listen address, for example :5201")
 	webTransportCert := flag.String("webtransport-tls-cert", "", "TLS certificate for the optional WebTransport listener")
