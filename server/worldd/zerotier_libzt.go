@@ -40,6 +40,7 @@ import (
 )
 
 const defaultZeroTierNetworkID = "e3918db4832a3056"
+const daemonName = "thruholdd"
 
 type libztRuntime struct {
 	networkID    uint64
@@ -60,8 +61,8 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 	if err != nil || netID == 0 {
 		return nil, errors.New("network ID must be a nonzero 16-digit hexadecimal value")
 	}
-	if err := osMkdirAllPrivate(storagePath); err != nil {
-		return nil, fmt.Errorf("create libzt state directory: %w", err)
+	if err := prepareZeroTierIdentityStorage(storagePath); err != nil {
+		return nil, err
 	}
 	path := C.CString(storagePath)
 	defer C.free(unsafe.Pointer(path))
@@ -87,6 +88,9 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 	nodeID := uint64(C.zts_node_get_id())
 	if nodeID == 0 || nodeID > (1<<40)-1 {
 		return nil, errors.New("libzt returned an invalid node ID")
+	}
+	if err := verifyZeroTierNodeID(storagePath, nodeID); err != nil {
+		return nil, err
 	}
 	if code := int(C.zts_net_join(C.uint64_t(netID))); code != 0 {
 		return nil, fmt.Errorf("libzt could not join network (%d)", code)

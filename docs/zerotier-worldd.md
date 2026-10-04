@@ -21,9 +21,10 @@ Central on 2026-10-04 because the locally stored API token returned HTTP 403.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
 to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
-`worldd` built with `-tags zerotier` now defaults to this network. The
-`--zerotier-network` flag can override it for testing; use the existing
-`xellent` network only when explicitly testing that separate `/24` LAN. After
+The packaged daemon name is `thruholdd`. A ZeroTier-enabled build defaults to
+this network without a network-ID argument. `--zerotier-network` remains an
+operator override for testing; use the existing `xellent` network only when
+explicitly testing that separate `/24` LAN. After
 Central API access is restored, record the exact IPv4 CIDR and confirm its
 managed route and flow rules here. Verify that the `/16` route does not capture
 traffic intended for a user's existing private network.
@@ -135,30 +136,41 @@ property of this host's command-execution environment, not an ElseMesh or
 ZeroTier network requirement; do not add a `spod` exception to deployment
 firewalls. The system's physical route to ZeroTier roots uses `wlo1`.
 
-`worldd` has an opt-in libzt integration for systems where installing a
-ZeroTier One service is inconvenient, including Android/Termux. Build libzt
-for the target platform first, then build `worldd` with cgo enabled and the
-libzt headers and library available. For a Linux shared-library build:
+`thruholdd` includes libzt and joins the dedicated network by default, without
+installing the separate ZeroTier One service or passing `--zerotier-network`.
+Build libzt for the target platform first, then use the build helper with its
+headers and shared library:
 
 ```sh
-CGO_ENABLED=1 \
-CGO_CFLAGS="-I/path/to/libzt/include" \
-CGO_LDFLAGS="-L/path/to/libzt/lib -lzt -lstdc++" \
-go build -tags zerotier -o worldd ./worldd
+LIBZT_INCLUDE_DIR=/path/to/libzt/include \
+LIBZT_LIB_DIR=/path/to/libzt/lib \
+THRUHOLDD_OUT=/path/to/external-build/server/bin \
+tools/build-thruholdd.sh
 ```
 
-At runtime, make `libzt.so` available to the dynamic linker (for example with
-`LD_LIBRARY_PATH`). A build with `-tags zerotier` defaults to network
-`e3918db4832a3056`; the flag is shown explicitly here for clarity:
+This creates `thruholdd` in the selected external build directory. At runtime, make `libzt.so` available to
+the dynamic linker (for example with `LD_LIBRARY_PATH`). The default network
+is compiled into the ZeroTier-enabled build, so neither the network ID nor a
+special transport flag is needed. Non-libzt `worldd` builds remain available
+for development and targets without a supported libzt toolchain.
 
-```sh
-worldd --zerotier-network e3918db4832a3056 --data /path/to/private/worldd-data
-```
-
-The embedded node identity is persisted in the `zerotier` subdirectory of the
-daemon data directory. Back up that directory with the rest of the daemon
-identity data; deleting it creates a different ZeroTier node. `worldd` waits
-up to 60 seconds for network membership/configuration, computes its
+The embedded node identity is persisted in
+`$XDG_CONFIG_HOME/elsemesh/zerotier/identity.public` and
+`identity.secret` (normally `~/.config/elsemesh/zerotier/` on Linux). This
+device-wide path is independent of a ThruHold profile or `--data`, so changing
+world profiles does not create another ZeroTier node. The private secret file
+and its directory are owner-only. `elsemesh-node-id` records the first
+successful node ID; if the identity files are lost, incomplete, or produce a
+different ID, `thruholdd` now stops instead of silently accepting a new node.
+At first startup, existing state at the former default
+`~/.config/tidewater/worldd/zerotier/` path is moved into this location so its
+node identity is preserved.
+Back up the complete `zerotier` directory and restore it with the daemon on a
+new installation. Run one libzt-enabled `thruholdd` process per OS user at a
+time because they share this device identity and libzt state. A separate
+`--zerotier-data` path is available for an explicit second node or isolated
+test; using it intentionally creates a different ZeroTier identity.
+`thruholdd` waits up to 60 seconds for network membership/configuration, computes its
 network-scoped 6PLANE address from its stable ZeroTier node ID, and announces
 that address on TCP port 42901. TCP dials to that network's 6PLANE `/40` prefix
 go through libzt; inbound connections are bridged to the ordinary libp2p TCP
@@ -177,16 +189,17 @@ browser peer path.
 
 ## Remaining validation
 
-On 2026-10-04, a Linux amd64 `worldd` build joined the dedicated ElseMesh
-network using its default ID. Its disposable node ID was `3af4fd5d50`; the
-daemon reported 6PLANE address `fc60:bbbd:e23a:f4fd:5d50::1` and advertised it
-for TCP. On 2026-10-04, two separate Linux `worldd` processes, each with its
+An earlier Linux amd64 `worldd` build joined the dedicated ElseMesh network;
+its disposable node ID was `3af4fd5d50` and it announced 6PLANE address
+`fc60:bbbd:e23a:f4fd:5d50::1`. On 2026-10-04, two separate Linux `worldd`
+processes, each with its
 own libzt state directory and ZeroTier identity, both joined public network
 `e3918db4832a3056` and received distinct 6PLANE addresses
-`fc60:bbbd:e24a:daf7:9c46::1` and `fc60:bbbd:e2f9:9b2:626f::1`. The second
-process attempted to dial the first over its 6PLANE TCP multiaddress, but the
+`fc60:bbbd:e24a:daf7:9c46::1` and `fc60:bbbd:e2f9:9b2:626f::1`. These were isolated test identities using
+explicit separate storage paths; normal installations now reuse the single
+device-wide identity described above. The second process attempted to dial the first over its 6PLANE TCP multiaddress, but the
 dial timed out and both `/healthz` responses reported zero DHT peers. The
-managed IPv4 address was not queried through libzt; current `worldd` code only
+managed IPv4 address was not queried through libzt; current `thruholdd` code only
 uses and announces the 6PLANE IPv6 address. This was not a successful peer
 traffic test.
 
@@ -196,7 +209,16 @@ During that attempt, `/var/log/fw.log` recorded outbound UDP/9993 drops on
 traffic on `spod`; this explains why this execution environment could not
 complete the peer test, and is not evidence that native ZeroTier One is needed
 or that the public network is misconfigured. No firewall exception was left in
-place. Retest from two hosts whose ordinary network firewall permits the
-required libzt outer UDP traffic. Separate NATs, direct versus relayed paths,
-browser relay access while Central is unavailable, managed IPv4 over libzt,
-and an Android/Termux libzt build plus Flip7 renderer check remain unverified.
+place. The concrete remaining tests are:
+
+1. Repeat a real `thruholdd` peer dial on two ordinary hosts and verify
+   connection establishment plus sustained bidirectional traffic.
+2. Repeat from separate NATs and record whether the path is direct or relayed.
+3. Add and test managed IPv4 support in libzt; current `thruholdd` uses 6PLANE
+   IPv6 only.
+4. Read back and verify Central flow rules for inner TCP peer traffic and
+   replies.
+5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
+   the browser.
+6. Confirm operation while the Central API is unavailable.
+7. Build and test Android/Termux libzt and check the renderer on the Flip7.

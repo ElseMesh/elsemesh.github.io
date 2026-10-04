@@ -86,6 +86,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	elsemeshConfigDir := filepath.Join(configDir, "elsemesh")
 	defaultData := filepath.Join(configDir, "tidewater", "worldd")
 	worldsDir := flag.String("worlds-dir", filepath.Join(configDir, "elsemesh", "worlds"), "directory containing named local ThruHold profiles")
 	worldProfile := flag.String("world-profile", "", "select a named local ThruHold profile (uses a separate node identity and data directory)")
@@ -99,6 +100,7 @@ func run() error {
 	removeProposalID := flag.String("remove-proposal", "", "remove one verified queued proposal by sha256 ID after owner review (requires --manifest)")
 	proposalOut := flag.String("proposal-out", "", "new private output file for --export-proposal")
 	dataDir := flag.String("data", defaultData, "private daemon data directory")
+	zeroTierDataDir := flag.String("zerotier-data", filepath.Join(elsemeshConfigDir, "zerotier"), "private persistent libzt identity/state directory (one identity per device by default)")
 	manifestPath := flag.String("manifest", "", "owner-signed world manifest JSON")
 	signManifestPath := flag.String("sign-manifest", "", "validate and owner-sign an unsigned runtime world manifest, then exit")
 	manifestOut := flag.String("manifest-out", "", "output path for --sign-manifest (must not already exist)")
@@ -138,7 +140,7 @@ func run() error {
 	roleStateSyncInterval := flag.Duration("role-state-sync-interval", time.Minute, "how often to sync owner-signed role revocations")
 	flag.Parse()
 	if *version {
-		fmt.Printf("worldd %s\n", buildRevision)
+		fmt.Printf("%s %s\n", daemonName, buildRevision)
 		return nil
 	}
 	operationCount := 0
@@ -383,7 +385,10 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	if *zeroTierNetwork != "" {
-		zeroTier, err = startZeroTier(*zeroTierNetwork, filepath.Join(*dataDir, "zerotier"))
+		if err := migrateLegacyZeroTierStorage(filepath.Join(configDir, "tidewater", "worldd", "zerotier"), *zeroTierDataDir); err != nil {
+			return fmt.Errorf("migrate existing ZeroTier identity: %w", err)
+		}
+		zeroTier, err = startZeroTier(*zeroTierNetwork, *zeroTierDataDir)
 		if err != nil {
 			return fmt.Errorf("start ZeroTier: %w", err)
 		}
