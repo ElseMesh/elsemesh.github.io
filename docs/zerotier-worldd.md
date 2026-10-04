@@ -16,11 +16,8 @@ The owner created ZeroTier network `e3918db4832a3056` in Central for ElseMesh.
 The owner reports a `/16` IPv4 range and 6PLANE enabled. The exact IPv4 range,
 public/private setting, managed route, and flow rules could not be read back
 from Central on 2026-10-04 because the locally stored API token returned HTTP
-403. ZeroTier's [Legacy API examples](https://docs.zerotier.com/api-central-examples/)
-show that member listings expose a `physicalAddress` field, but the docs do not
-guarantee when Central populates it. Do not treat a successful local join or a
-6PLANE address as proof that Central has a currently observed public endpoint
-for that member.
+403. The Legacy API's `physicalAddress` is the IP address the member last spoke
+to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
 `worldd` built with `-tags zerotier` now defaults to this network. The
 `--zerotier-network` flag can override it for testing; use the existing
