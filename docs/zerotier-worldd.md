@@ -77,7 +77,7 @@ Confirm the network is `OK` and note the 6PLANE IPv6 address assigned to this
 host. Do not use a physical/public IP in place of the 6PLANE address for this
 path.
 
-`worldd` listens for libp2p TCP and QUIC on port `42901` by default (the port
+`thruholdd` listens for libp2p TCP and QUIC on port `42901` by default (the port
 can be changed with `--p2p-port`). Permit TCP and UDP on the chosen peer port
 in the network flow rules and the host firewall. TCP carries the TCP transport;
 QUIC carries UDP. If using the default, announce the assigned 6PLANE address
@@ -124,7 +124,7 @@ can force relay paths or prevent connectivity. Do not open the world's TCP or
 UDP peer port on the physical WAN just for libzt. The TCP peer stream is carried
 inside ZeroTier. The same `42901` TCP allowance still belongs in ZeroTier
 Central's *inner network flow rules* when other overlay members need to reach a
-worldd listener. See ZeroTier's [corporate firewall guidance](https://docs.zerotier.com/corporate-firewalls/)
+thruholdd listener. See ZeroTier's [corporate firewall guidance](https://docs.zerotier.com/corporate-firewalls/)
 and [root server whitelist](https://docs.zerotier.com/whitelist/) for the
 outer-path requirements. Native ZeroTier One deployments are different: their
 host firewall may need rules on the kernel `zt...` interface for inner peer
@@ -144,11 +144,14 @@ headers and shared library:
 ```sh
 LIBZT_INCLUDE_DIR=/path/to/libzt/include \
 LIBZT_LIB_DIR=/path/to/libzt/lib \
-THRUHOLDD_OUT=/path/to/external-build/server/bin \
+THRUHOLDD_BUILD_SERVER=/path/to/external-build/server \
 tools/build-thruholdd.sh
 ```
 
-This creates `thruholdd` in the selected external build directory. At runtime, make `libzt.so` available to
+This builds from the selected external source mirror and creates `thruholdd`
+under its `bin/` directory. Set `BUILD_REVISION` to the source repository's
+current commit when the build mirror's Git metadata is stale. At runtime,
+make `libzt.so` available to
 the dynamic linker (for example with `LD_LIBRARY_PATH`). The default network
 is compiled into the ZeroTier-enabled build, so neither the network ID nor a
 special transport flag is needed. Non-libzt `worldd` builds remain available
@@ -189,9 +192,9 @@ browser peer path.
 
 ## Remaining validation
 
-An earlier Linux amd64 `worldd` build joined the dedicated ElseMesh network;
+An earlier Linux amd64 `thruholdd` build joined the dedicated ElseMesh network;
 its disposable node ID was `3af4fd5d50` and it announced 6PLANE address
-`fc60:bbbd:e23a:f4fd:5d50::1`. On 2026-10-04, two separate Linux `worldd`
+`fc60:bbbd:e23a:f4fd:5d50::1`. On 2026-10-04, two separate Linux `thruholdd`
 processes, each with its
 own libzt state directory and ZeroTier identity, both joined public network
 `e3918db4832a3056` and received distinct 6PLANE addresses
