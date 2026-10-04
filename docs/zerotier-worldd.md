@@ -13,10 +13,12 @@ ID yourself.
 ## Dedicated ElseMesh network
 
 The owner created ZeroTier network `e3918db4832a3056` in Central for ElseMesh.
-The owner reports a `/16` IPv4 range and 6PLANE enabled. The exact IPv4 range,
-public/private setting, managed route, and flow rules could not be read back
-from Central on 2026-10-04 because the locally stored API token returned HTTP
-403. The Legacy API's `physicalAddress` is the IP address the member last spoke
+The owner reports a `/16` IPv4 range and 6PLANE enabled, and confirmed in
+ZeroTier Central that the network is public. A native client previously
+received `172.22.194.239/16`, indicating the managed range `172.22.0.0/16`.
+The exact current managed route and flow rules could not be read back from
+Central on 2026-10-04 because the locally stored API token returned HTTP 403.
+The Legacy API's `physicalAddress` is the IP address the member last spoke
 to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
 `worldd` built with `-tags zerotier` now defaults to this network. The
@@ -109,6 +111,30 @@ authorization must continue to work without a Central API request.
 
 ## Embedded libzt transport
 
+### Host firewall for embedded libzt
+
+`worldd`'s libzt node runs ZeroTier in userspace; it does not create a native
+`zt...` network interface. The host firewall therefore sees the encrypted
+outer UDP packets, not the inner ElseMesh TCP connection. For ordinary hosts,
+allow UDP egress to ZeroTier roots on port 9993 and stateful reply traffic.
+Direct peer paths also use dynamically negotiated UDP endpoints, so a strict
+egress policy may need to permit outbound UDP to peer endpoints; blocking this
+can force relay paths or prevent connectivity. Do not open the world's TCP or
+UDP peer port on the physical WAN just for libzt. The TCP peer stream is carried
+inside ZeroTier. The same `42901` TCP allowance still belongs in ZeroTier
+Central's *inner network flow rules* when other overlay members need to reach a
+worldd listener. See ZeroTier's [corporate firewall guidance](https://docs.zerotier.com/corporate-firewalls/)
+and [root server whitelist](https://docs.zerotier.com/whitelist/) for the
+outer-path requirements. Native ZeroTier One deployments are different: their
+host firewall may need rules on the kernel `zt...` interface for inner peer
+traffic.
+
+The development host has an additional local `spod` isolation interface. Its
+output chain deliberately drops general UDP from that interface. That is a
+property of this host's command-execution environment, not an ElseMesh or
+ZeroTier network requirement; do not add a `spod` exception to deployment
+firewalls. The system's physical route to ZeroTier roots uses `wlo1`.
+
 `worldd` has an opt-in libzt integration for systems where installing a
 ZeroTier One service is inconvenient, including Android/Termux. Build libzt
 for the target platform first, then build `worldd` with cgo enabled and the
@@ -154,12 +180,23 @@ browser peer path.
 On 2026-10-04, a Linux amd64 `worldd` build joined the dedicated ElseMesh
 network using its default ID. Its disposable node ID was `3af4fd5d50`; the
 daemon reported 6PLANE address `fc60:bbbd:e23a:f4fd:5d50::1` and advertised it
-for TCP. A later follow-up run with the same profile timed out before the node
-reached ZeroTier online state, so that attempt did not test Central visibility
-or peer traffic. The successful run proves one local join and address
-announcement only, not a direct public endpoint, cross-network reachability,
-or successful portal traversal. The disposable daemon is stopped, so the node
-is currently offline. Peer traffic across the overlay, separate NATs, browser
-relay access while Central is unavailable, and an Android/Termux libzt build
-plus Flip7 renderer check remain unverified. Do not treat a successful Linux
-build or one-node join as proof of those deployment paths.
+for TCP. On 2026-10-04, two separate Linux `worldd` processes, each with its
+own libzt state directory and ZeroTier identity, both joined public network
+`e3918db4832a3056` and received distinct 6PLANE addresses
+`fc60:bbbd:e24a:daf7:9c46::1` and `fc60:bbbd:e2f9:9b2:626f::1`. The second
+process attempted to dial the first over its 6PLANE TCP multiaddress, but the
+dial timed out and both `/healthz` responses reported zero DHT peers. The
+managed IPv4 address was not queried through libzt; current `worldd` code only
+uses and announces the 6PLANE IPv6 address. This was not a successful peer
+traffic test.
+
+During that attempt, `/var/log/fw.log` recorded outbound UDP/9993 drops on
+`OUT=spod` at 19:40:55 and 19:41:00, including packets to ZeroTier root
+`103.195.103.66`. The local nftables output chain intentionally drops general
+traffic on `spod`; this explains why this execution environment could not
+complete the peer test, and is not evidence that native ZeroTier One is needed
+or that the public network is misconfigured. No firewall exception was left in
+place. Retest from two hosts whose ordinary network firewall permits the
+required libzt outer UDP traffic. Separate NATs, direct versus relayed paths,
+browser relay access while Central is unavailable, managed IPv4 over libzt,
+and an Android/Termux libzt build plus Flip7 renderer check remain unverified.
