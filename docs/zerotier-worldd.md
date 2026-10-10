@@ -13,52 +13,62 @@ ID yourself.
 ## Dedicated ElseMesh network
 
 The owner created ZeroTier network `e3918db4832a3056` in Central for ElseMesh.
-The owner reports a `/16` IPv4 range and 6PLANE enabled, and confirmed in
-ZeroTier Central that the network is public. A native client previously
-received `172.22.194.239/16`, indicating the managed range `172.22.0.0/16`.
-The exact current managed route and flow rules could not be read back from
-Central on 2026-10-04 because the locally stored API token returned HTTP 403.
+An authenticated Central UI inspection on 2026-10-10 confirmed that it is
+public, has 6PLANE enabled, and uses the managed IPv4 route `172.22.0.0/16`.
+A native client previously received `172.22.194.239/16`, consistent with that
+range. The locally stored Legacy API token still returns HTTP 403; that blocks
+API reads but does not prevent checking the settings in Central's web UI.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
 to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
 The packaged daemon name is `thruholdd`. A ZeroTier-enabled build defaults to
 this network without a network-ID argument. `--zerotier-network` remains an
 operator override for testing; use the existing `xellent` network only when
-explicitly testing that separate `/24` LAN. After
-Central API access is restored, record the exact IPv4 CIDR and confirm its
-managed route and flow rules here. Verify that the `/16` route does not capture
-traffic intended for a user's existing private network.
+explicitly testing that separate `/24` LAN. The `/16` route can overlap with
+private networks on a user's device; inspect local routes before relying on
+managed IPv4. Current `thruholdd` peer routing uses 6PLANE IPv6, not managed
+IPv4.
 
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
 (mode `0600`), do not copy it into a repository or world/client configuration,
 and do not include it in command output or logs. A read-only request to the
 documented Legacy API endpoint returned HTTP 403 on 2026-10-10; the local file
-is still mode `0600`. The repeated 403 indicates the saved credential is not
-accepted, but does not establish that network settings changed. Central's
-current pool, 6PLANE setting, and flow rules therefore remain unverified.
-Replace the local file only after obtaining a working Legacy API token in
-Central; never share the token in chat or source control.
+is still mode `0600`. The saved credential is not accepted, but current network
+settings have been checked through the authenticated Central UI. Replacing the
+local API credential is not required for world runtime or peer connectivity.
+Never share the token in chat or source control.
 
-The last recorded flow-rule inspection found TCP destination port `42901` in
-the allow list for `worldd`'s libp2p listener, while the existing final UDP
-rule allowed QUIC traffic on UDP `42901`. Preserve the other existing service
-rules. Because the current Central API credential is rejected, treat this as
-the last known configuration, not a verified current snapshot.
+The 2026-10-10 Central UI inspection confirmed this custom, stateless policy.
+It explicitly drops frame types other than IPv4, ARP, and IPv6; its default
+action also drops unmatched packets, so only the listed traffic is allowed:
 
-If Central is using templated flow rules, add custom allowances for both TCP
-and UDP destination port `42901` (or the configured `--p2p-port`). If the UDP
-catch-all has been removed, do not open all UDP for ElseMesh. For the advanced
-custom rules engine, do not assume connection tracking: ZeroTier documents
-that custom rules are stateless. TCP replies need the documented SYN/ACK
-whitelisting pattern, and UDP request/reply policy needs deliberate handling
-for both directions, preferably scoped to the intended members/tags. A lone
-UDP destination-port rule can allow requests while dropping replies. See the
-[ZeroTier Rules Engine guide](https://docs.zerotier.com/rules/) before editing
-custom rules, and verify the final policy in Central. These flow rules apply
-only to traffic carried over ZeroTier; they do not open the machine's public
-firewall. The browser HTTPS/WSS gateway does not need an overlay rule unless
-clients are intentionally connecting to it over ZeroTier.
+```text
+drop not ethertype ipv4 and not ethertype arp and not ethertype ipv6;
+accept ethertype arp;
+accept ipprotocol tcp and dport 42901;
+accept ipprotocol tcp and sport 42901;
+accept ipprotocol udp and dport 42901;
+accept ipprotocol udp and sport 42901;
+accept ipprotocol 1;
+accept ipprotocol 58;
+```
+
+Both source and destination port rules are required because custom ZeroTier
+rules are stateless. This permits the TCP/UDP replies for peer traffic on
+`42901`; it is not a public-host firewall rule. The rules were saved and
+persisted in Central. If the daemon port changes, update the policy as well.
+These rules govern traffic inside the overlay; the host firewall separately
+needs to permit libzt's outbound UDP bootstrap/peer traffic over the physical
+network. The browser HTTPS/WSS gateway does not need an overlay rule unless
+clients intentionally connect to it over ZeroTier.
+
+The configured custom rules are a narrow starting policy for TCP and QUIC on
+the default port. Keep any future ports similarly explicit and update both
+directions where the rules engine is stateless. See the
+[ZeroTier Rules Engine guide](https://docs.zerotier.com/rules/) before changing
+the policy. These rules apply only to overlay traffic; they do not open the
+machine's public firewall.
 
 Public membership means anyone who knows this network ID may join; application
 identity signatures and world permissions must still be enforced by ElseMesh.
@@ -368,20 +378,48 @@ state directories. Both joined `e3918db4832a3056` and returned healthy local
 `fc60:bbbd:e2fe:616a:a61f::1`. The phone's bootstrap dial to the Linux
 6PLANE TCP address on port `42901` timed out, and both health responses showed
 `dhtPeers: 0`. This clean retry does not establish inter-device connectivity.
-The separate-NAT condition and the current Central flow rules also remain
-unverified, so this result does not identify the cause of the timeout. Both
-test daemons and their disposable files were removed after the run.
+This retry used the then-current pre-policy state; the Central policy was
+checked and saved afterward through the authenticated UI. The timeout does not
+identify the cause. Both test daemons and their disposable files were removed
+after the run.
+
+### Post-policy peer check and current access state (2026-10-10)
+
+After saving the stateless Central policy documented above, a new Linux node
+(`680b1b1a8c`, `fc60:bbbd:e268:b1b:1a8c::1`) and a new Flip7 node
+(`af2eb03963`, `fc60:bbbd:e2af:2eb0:3963::1`) joined the dedicated network.
+Both local `/healthz` endpoints returned `status: ok`, but the phone's bootstrap
+dial to the Linux node at TCP `42901` timed out and both reported
+`dhtPeers: 0`. The separate-NAT condition was not established, and this result
+does not prove whether Central, host routing, libzt path establishment, or the
+network topology caused the failure.
+
+The Linux connection adapter now retains libzt's `zts_connect` return code in
+the error even when libp2p's context deadline also fires. This diagnostic was
+built for Linux amd64 and Android arm64, and `go test -tags zerotier ./worldd`
+passed on Linux. It has not yet been exercised on the Flip7: the current host
+has no ADB device listed, and `ssh flip7` resolves to `192.168.192.8` but fails
+with `No route to host`; the host's ZeroTier neighbor entry for that address is
+incomplete. A Linux-only network-enabled smoke test did join the network as
+`077e7872b2` (`fc60:bbbd:e207:7e78:72b2::1`) and returned healthy local status,
+but had no bootstrap peer and therefore showed `dhtPeers: 0`.
+
+Use a network-enabled test shell for live libzt checks. A first attempt from the
+restricted build shell could not bring the node online; that was a sandbox
+network restriction, not evidence of a ZeroTier runtime failure. Source edits
+remain under the source tree and binaries under the mirrored external build
+tree; the trees are copied/synchronized with `cpto`, not linked together.
 
 The remaining tests are:
 
-1. Diagnose the failed clean Flip7-to-Linux TCP dial, then verify connection
-   establishment and sustained bidirectional traffic between two `thruholdd`
-   nodes.
+1. Restore Flip7 connectivity to the host, diagnose the post-policy TCP dial,
+   then verify connection establishment and sustained bidirectional traffic
+   between two `thruholdd` nodes.
 2. Repeat from separate NATs and record whether the path is direct or relayed.
 3. Add and test managed IPv4 support in libzt; current `thruholdd` uses 6PLANE
    IPv6 only.
-4. Read back and verify Central flow rules for inner TCP peer traffic and
-   replies.
+4. Verify the saved Central flow policy continues to allow the configured
+   daemon ports and replies when those ports change.
 5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
    the browser.
 6. Confirm operation while the Central API is unavailable.

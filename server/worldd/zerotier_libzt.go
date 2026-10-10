@@ -262,7 +262,7 @@ func (ztDialer) DialContext(ctx context.Context, _, address string) (net.Conn, e
 	if code := int(C.zts_connect(C.int(fd), cHost, C.ushort(port), C.int(timeout))); code != 0 {
 		C.zts_close(C.int(fd))
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("%w: libzt TCP connect to %s failed (%d)", ctx.Err(), address, code)
 		}
 		return nil, fmt.Errorf("libzt TCP connect to %s failed (%d)", address, code)
 	}
