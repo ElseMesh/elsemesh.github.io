@@ -66,6 +66,11 @@ phone is dozing and the latest capture is black, so visual verification remains
 open. See [ZeroTier networking](zerotier-worldd.md) for addresses and the
 remaining gates.
 
+The same direct-source CMake path also built native Linux amd64 `libzt.so` and
+`thruholdd`. A disposable Linux daemon joined the dedicated network and
+returned HTTP 200 from `/healthz` with zero DHT peers before shutdown. This
+verifies Linux startup, not peer discovery or public reachability.
+
 ## Remaining implementation gates
 
 ### 1. Complete the island as a portable example world

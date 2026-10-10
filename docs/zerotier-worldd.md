@@ -292,6 +292,14 @@ loopback health endpoint succeeded. The process was stopped and its temporary
 identity and files were removed. This validates the new binary on-device, not
 peer connectivity, portal transfer, or renderer appearance.
 
+A native Linux amd64 `zt-shared` build and `thruholdd` link also passed with
+`ZTS_ZEROTIERONE_SOURCE_DIR` set to the same fork checkout. A disposable Linux
+daemon joined the dedicated network as node `17bef5bb87` at
+`fc60:bbbd:e217:bef5:bb87::1`; its loopback `/healthz` returned HTTP 200 and
+`status: ok` with `dhtPeers: 0`. The daemon was stopped and its temporary
+identity removed. This confirms Linux startup and health against the direct
+source build, but not peer discovery or public reachability.
+
 That Flip7 runtime smoke used an independent build-tree copy of the same
 ZeroTierOne `exp3` commit. The subsequent direct-source CMake build passed,
 but it has not been redeployed: the host's next SSH attempt returned `No route
