@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -117,6 +118,20 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 			expected := net.ParseIP(C.GoString(&raw[0])).To16()
 			if expected == nil || !address.Equal(expected) {
 				return nil, errors.New("assigned ZeroTier IPv6 address does not match this network's 6PLANE address")
+			}
+			switch assigned := int(C.zts_addr_is_assigned(C.uint64_t(netID), C.ZTS_AF_INET)); assigned {
+			case 0:
+				log.Printf("ZeroTier managed IPv4 address: not assigned")
+			case 1:
+				if code := int(C.zts_addr_get_str(C.uint64_t(netID), C.ZTS_AF_INET, &raw[0], C.uint(C.ZTS_IP_MAX_STR_LEN))); code != 0 {
+					log.Printf("ZeroTier managed IPv4 address is assigned but unavailable (%d)", code)
+				} else if ipv4 := net.ParseIP(C.GoString(&raw[0])).To4(); ipv4 == nil {
+					log.Printf("ZeroTier managed IPv4 address is assigned but invalid")
+				} else {
+					log.Printf("ZeroTier managed IPv4 address: %s", ipv4)
+				}
+			default:
+				log.Printf("could not determine ZeroTier IPv4 assignment (%d)", assigned)
 			}
 			mask := net.CIDRMask(40, 128)
 			runtime := &libztRuntime{networkID: netID, nodeID: nodeID, address: address, prefix: net.IPNet{IP: address.Mask(mask), Mask: mask}, listener: -1}

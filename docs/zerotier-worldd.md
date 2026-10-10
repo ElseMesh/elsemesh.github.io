@@ -16,8 +16,15 @@ The owner created ZeroTier network `e3918db4832a3056` in Central for ElseMesh.
 An authenticated Central UI inspection on 2026-10-10 confirmed that it is
 public, has 6PLANE enabled, and uses the managed IPv4 route `172.22.0.0/16`.
 A native client previously received `172.22.194.239/16`, consistent with that
-range. The locally stored Legacy API token still returns HTTP 403; that blocks
-API reads but does not prevent checking the settings in Central's web UI.
+range. On 2026-10-10, a disposable libzt `thruholdd` identity (`56497525c1`)
+also joined and received `172.22.2.36`, within the configured `/16`, plus its
+expected 6PLANE address. The host kernel's route lookup for `172.22.2.36`
+selected the ordinary `wlo1` default gateway (`192.168.20.1`), confirming that
+this userspace libzt address is not installed as a host OS route. `thruholdd`
+currently reports the managed IPv4 for diagnostics but does not advertise or
+use it for peer routing; this join did not test IPv4 peer traffic. The locally
+stored Legacy API token still returns HTTP 403; that blocks API reads but does
+not prevent checking the settings in Central's web UI.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
 to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
@@ -26,8 +33,9 @@ this network without a network-ID argument. `--zerotier-network` remains an
 operator override for testing; use the existing `xellent` network only when
 explicitly testing that separate `/24` LAN. The `/16` route can overlap with
 private networks on a user's device; inspect local routes before relying on
-managed IPv4. Current `thruholdd` peer routing uses 6PLANE IPv6, not managed
-IPv4.
+managed IPv4. `thruholdd` reports an assigned managed IPv4 address in startup
+logs for diagnostics, but peer routing and advertised overlay addresses still
+use 6PLANE IPv6 only.
 
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
