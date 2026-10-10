@@ -81,9 +81,11 @@ hosting**. It loads a profile, verifies the owner-signed manifest and each
 declared asset, checks `node.key` against the owner key, registers with a fresh
 challenge, maintains heartbeats, and serves bounded asset ranges. Hosted-world
 invites include the chosen gateway. The Go gateway enforces session and request
-limits. The frontend build, focused browser-host endpoint check, full npm test
-suite, Go `worldd` tests, and loopback WSS gateway test passed for commit
-`ac86602`. The full suite exposed and now exercises Go validation for the
+limits. The focused browser-host worker test creates a temporary signed profile,
+drives the worker against a mock WSS gateway, verifies its owner proof and
+heartbeat, and checks exact asset-range bytes; it is part of `npm test`. The
+frontend build, full npm test suite, Go `worldd` tests, and loopback WSS gateway
+test passed for the current implementation. Go validation also covers the
 Example Island's `village-materials/2` component.
 
 Still open: a real browser owner session against a deployed public WSS gateway,

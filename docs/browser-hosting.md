@@ -136,12 +136,15 @@ HTTPS/WSS gateway from a network outside the developer machine.
 The browser-host UI and worker now load a profile, verify its signed manifest
 and every declared asset, check that the selected `node.key` matches the world
 owner, register through the challenge protocol, maintain heartbeats, and serve
-bounded asset ranges. Endpoint policy tests, JavaScript syntax checks, and the
-external production bundle pass. The full `npm test` suite and Go worldd tests
-also pass, including serving the Example Island and cave as separate portal-
-linked worlds. These checks do not yet exercise the owner worker in a real
-browser against a deployed public WSS gateway or test a second browser fetching
-from it. Flip7 is offline at present, so no device-side graphics check was run.
+bounded asset ranges. `npm test` includes `test/browser-host-client.mjs`, which
+builds a temporary `thruholdd` profile and drives the actual worker against a
+mock WSS gateway. It checks owner-key matching, declared asset hashes, the
+nonce-bound signature, registration and heartbeat messages, and exact bytes
+for a requested asset range. The full test suite and Go `worldd` tests pass,
+including serving the Example Island and cave as separate portal-linked
+worlds. These checks do not yet exercise the owner worker in a real browser
+against a deployed public WSS gateway or test a second browser fetching from
+it. Flip7 is offline at present, so no device-side graphics check was run.
 
 The gateway integration tests cover owner proof, replay rejection, provider
 lookup, signed manifest retrieval, declared asset range forwarding, chunk-size
