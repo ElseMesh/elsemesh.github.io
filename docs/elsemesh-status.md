@@ -55,8 +55,11 @@ so this is only transient inter-device evidence, not a sustained or
 separate-NAT test. A clean Android arm64 libzt rebuild against the ZeroTierOne
 `exp3` fork and a linked `thruholdd` cross-build passed. The rebuilt daemon was
 then run on the Flip7 with isolated state: it joined the dedicated LAN and
-returned healthy with zero DHT peers. The external build tree uses an
-independent fork snapshot, with no source-tree symlink. The Legacy Central
+returned healthy with zero DHT peers. A subsequent clean build read the
+existing `exp3` checkout directly through CMake, without a vendor copy or
+symlink, and kept artifacts in the external build tree. That exact artifact
+has not been redeployed because the later SSH attempt returned
+`No route to host`. The Legacy Central
 read-only API still returns HTTP 403 using the owner-only mode-0600 token
 file. Host ADB lists no phone, but on-device ADB connects to localhost; the
 phone is dozing and the latest capture is black, so visual verification remains

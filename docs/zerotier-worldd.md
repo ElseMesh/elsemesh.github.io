@@ -204,6 +204,7 @@ examples. Reproduce it with:
 NDK=/path/to/android-ndk
 cmake -S /path/to/libzt -B /path/to/libzt-android-arm64-build \
   -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+  -DZTS_ZEROTIERONE_SOURCE_DIR=/path/to/ZeroTierOne \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 \
   -DZTS_NDK_ONLY=ON -DBUILD_SHARED_LIB=ON -DBUILD_STATIC_LIB=OFF \
   -DBUILD_HOST_SELFTEST=OFF -DBUILD_HOST_EXAMPLES=OFF \
@@ -212,14 +213,15 @@ cmake --build /path/to/libzt-android-arm64-build --target zt-shared --parallel
 ```
 
 This build was validated against the ElseMesh owner's ZeroTierOne `exp3` fork
-at commit `be0d1923d88d62f7c9e9499d96a1fb541a870153`. Keep a regular source
-snapshot under the external libzt build tree's `ext/ZeroTierOne`; do not
-symlink a source checkout there, because vendor build/configuration steps must
-not write into source trees. libzt detects the fork's `node/ECC.hpp` API and
-selects its C++17, `ZT_Node_Config`, and ECC-key compatibility path. When the
-pinned upstream `C25519` API is present instead, it retains the C++11 and
-upstream constructor path. The fork also now skips unsupported CPU-affinity
-pinning on Android (ZeroTierOne commit `be0d1923d`).
+at commit `be0d1923d88d62f7c9e9499d96a1fb541a870153`. Set
+`ZTS_ZEROTIERONE_SOURCE_DIR` to the existing checkout; libzt reads its source
+directly and writes build outputs only under the external CMake build
+directory. No copy or symlink into `ext/ZeroTierOne` is needed. libzt detects
+the fork's `node/ECC.hpp` API and selects its C++17, `ZT_Node_Config`, and
+ECC-key compatibility path. When the pinned upstream `C25519` API is present
+instead, it retains the C++11 and upstream constructor path. The fork also
+skips unsupported CPU-affinity pinning on Android (ZeroTierOne commit
+`be0d1923d`).
 
 The resulting `libzt.so` is an AArch64 Android shared library and depends
 only on Android system libraries. Build `thruholdd` against that library and
@@ -272,11 +274,12 @@ an awake, unlocked phone. The temporary daemon was stopped; the persistent
 phone ZeroTier identity was not touched.
 
 After the fork-compatibility changes, a clean 128-step `zt-shared` rebuild
-passed, and `thruholdd` was rebuilt against that artifact. `llvm-readelf`
+passed with `ZTS_ZEROTIERONE_SOURCE_DIR` pointing directly to the `exp3`
+checkout. The generated Ninja rules name source files under that checkout;
+all object files and libraries are written under the external libzt build
+tree. `thruholdd` was rebuilt against the resulting artifact. `llvm-readelf`
 confirmed both outputs are Android AArch64/API 26 binaries; `thruholdd`
-depends on `libzt.so` plus Android system libraries. The independent fork
-snapshot remained a real directory in the external build tree, with no link
-back into either source repository.
+depends on `libzt.so` plus Android system libraries.
 
 The rebuilt binaries were then copied to a disposable Termux directory on the
 Flip7. Their SHA-256 hashes matched the external build artifacts, and
@@ -288,6 +291,12 @@ enumeration (`netlinkrib: permission denied`), while the ZeroTier join and
 loopback health endpoint succeeded. The process was stopped and its temporary
 identity and files were removed. This validates the new binary on-device, not
 peer connectivity, portal transfer, or renderer appearance.
+
+That Flip7 runtime smoke used an independent build-tree copy of the same
+ZeroTierOne `exp3` commit. The subsequent direct-source CMake build passed,
+but it has not been redeployed: the host's next SSH attempt returned `No route
+to host`. The direct-source build is compile-verified; its exact artifact has
+not received a second device runtime check.
 
 ## Remaining validation
 
