@@ -195,6 +195,27 @@ for development and targets without a supported libzt toolchain. The helper can
 be invoked from either the source checkout or its mirrored `.build` tree; both
 paths resolve to the same external server and sibling libzt build directories.
 
+### Observed physical peer endpoints
+
+The current libzt source already exposes active physical path observations with
+`zts_core_query_path_count(peerId)` and `zts_core_query_path(peerId, index,
+buffer, length)`. The caller holds libzt's core lock around both queries. Each
+successful path query returns an endpoint string in `IP/UDP-port` form; expired
+paths are excluded. This is learned from the running node's peer state, not a
+ZeroTier Central lookup. The address and port can change and only describe a
+currently observed ZeroTier path. `thruholdd` does not currently query or
+publish these endpoints; normal peer traffic uses the managed ZeroTier overlay.
+
+This API is sufficient to observe the endpoint and port; no libzt source patch
+is currently needed for that information. It does not export a socket handle,
+reserve a port for another protocol, or guarantee that a distinct UDP protocol
+can traverse the same NAT mapping. ZeroTier owns its transport socket and
+expects authenticated ZeroTier packets. A future direct ElseMesh transport
+would need a proved endpoint-exchange and NAT-traversal protocol plus safe
+packet demultiplexing (or its own socket/mapping); it must keep the managed
+overlay as fallback. Do not treat a path query result as a routable stable
+address or permission to bypass overlay identity and world authorization.
+
 The embedded node identity is persisted in
 `$XDG_CONFIG_HOME/elsemesh/zerotier/identity.public` and
 `identity.secret` (normally `~/.config/elsemesh/zerotier/` on Linux). This
