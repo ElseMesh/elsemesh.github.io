@@ -112,9 +112,28 @@ close-view source. The 141 scanned debris placements across four source models
 now use the source GLBs' authored third mesh as their shared far LOD. It reduces
 each model from 700 to 160 triangles, 500 to 119, 500 to 119, and 299 to 80,
 while retaining the exact same embedded albedo bytes, UV channel, and normals.
-The base and far-level bounds are combined for screen-size selection. Near/far image comparisons and the Flip7 check
-remain open; mesh structure and the runtime selector alone do not prove
-distant visual quality.
+The base and far-level bounds are combined for screen-size selection. A matched
+Blender 4.3.2 comparison rendered each base/far pair with the same placement
+rotation, combined bounds, orthographic camera, lighting, and resolution. The
+four image SSIM scores were 0.973 (branch 01), 0.961 (branch 02), 0.992
+(trunk), and 0.969 (shell). These renders show the shared texture and broadly
+retained silhouettes at one sample angle; they are not browser-renderer or
+Flip7 sign-off. Compare near/far views in the running world, including its
+actual lighting and distance threshold, and repeat the device check when the
+Flip7 is reachable.
+
+![Matched Blender renders of scanned debris near and far LODs](images/scanned-debris-lod-review.jpg)
+
+Recreate the individual renders with Blender 4.3.2:
+
+```sh
+blender --background --python tools/blender/render-scanned-lod-comparison.py
+```
+
+The script writes the eight PNGs to
+`/var/tmp/elsemesh-scanned-lod-review/`. ImageMagick's `compare -metric SSIM`
+can reproduce the four metrics above. This isolated GLB review does not include
+the Example Island scene, browser post-processing, or portal cameras.
 
 ![Matched Blender render of the full and distance-level cave meshes](images/underneath-cave-lod-station.jpg)
 
