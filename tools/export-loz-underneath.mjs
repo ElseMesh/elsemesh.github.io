@@ -3,6 +3,10 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseGLB } from '../src/engine/loaders/GLTF.js';
+import { Matrix4 } from '../src/engine/math/Matrix4.js';
+import { Quaternion } from '../src/engine/math/Quaternion.js';
+import { Vector3 } from '../src/engine/math/Vector3.js';
 import { validateWorldSource } from '../src/network/WorldSource.js';
 
 const root = path.resolve( path.dirname( fileURLToPath( import.meta.url ) ), '..' );
@@ -106,6 +110,90 @@ function rewriteGLBMaterials( bytes ) {
 	return Buffer.concat( [ header, jsonHeader, paddedJSON, rest ] );
 }
 
+function retainSourceMaterials( sourceBytes, lodBytes ) {
+	function parse( bytes ) {
+		let json = null;
+		const chunks = [];
+		for ( let offset = 12; offset < bytes.length; ) {
+			const length = bytes.readUInt32LE( offset ), type = bytes.readUInt32LE( offset + 4 );
+			const end = offset + 8 + length;
+			if ( end > bytes.length ) throw new Error( 'Cave LOD GLB chunk exceeds the file boundary' );
+			if ( type === 0x4e4f534a ) json = JSON.parse( bytes.toString( 'utf8', offset + 8, end ) );
+			else chunks.push( bytes.subarray( offset, end ) );
+			offset = end;
+		}
+		if ( ! json ) throw new Error( 'Cave LOD GLB has no JSON chunk' );
+		return { json, chunks };
+	}
+	const base = parse( sourceBytes ), lod = parse( lodBytes );
+	const materials = base.json.materials || [], lodMaterials = lod.json.materials || [];
+	const indices = new Map( materials.map( ( material, index ) => [ material.name, index ] ) );
+	for ( const mesh of lod.json.meshes || [] ) for ( const primitive of mesh.primitives || [] ) {
+		if ( primitive.material === undefined ) continue;
+		const name = lodMaterials[ primitive.material ]?.name;
+		const index = indices.get( name );
+		if ( index === undefined ) throw new Error( `Cave LOD uses a material missing from the full-detail GLB: ${name || primitive.material}` );
+		primitive.material = index;
+	}
+	lod.json.materials = materials;
+	lod.json.extensionsUsed = [ ...new Set( [ ...( lod.json.extensionsUsed || [] ), ...( base.json.extensionsUsed || [] ) ] ) ];
+	const json = Buffer.from( JSON.stringify( lod.json ) );
+	const paddedJSON = Buffer.concat( [ json, Buffer.alloc( ( 4 - json.length % 4 ) % 4, 0x20 ) ] );
+	const jsonHeader = Buffer.alloc( 8 );
+	jsonHeader.writeUInt32LE( paddedJSON.length, 0 ); jsonHeader.writeUInt32LE( 0x4e4f534a, 4 );
+	const rest = Buffer.concat( lod.chunks );
+	const header = Buffer.alloc( 12 );
+	header.writeUInt32LE( 0x46546c67, 0 ); header.writeUInt32LE( 2, 4 );
+	header.writeUInt32LE( header.length + jsonHeader.length + paddedJSON.length + rest.length, 8 );
+	return Buffer.concat( [ header, jsonHeader, paddedJSON, rest ] );
+}
+
+function boundsForGLB( bytes ) {
+	const parsed = parseGLB( bytes.buffer.slice( bytes.byteOffset, bytes.byteOffset + bytes.byteLength ) );
+	const min = [ Infinity, Infinity, Infinity ], max = [ - Infinity, - Infinity, - Infinity ];
+	const point = new Vector3();
+	const matrixForNode = node => node.matrix ? new Matrix4().fromArray( node.matrix ) : new Matrix4().compose(
+		new Vector3( ...( node.translation || [ 0, 0, 0 ] ) ),
+		new Quaternion( ...( node.rotation || [ 0, 0, 0, 1 ] ) ),
+		new Vector3( ...( node.scale || [ 1, 1, 1 ] ) ),
+	);
+	function visit( nodeIndex, parent ) {
+		const node = parsed.json.nodes[ nodeIndex ];
+		if ( ! node ) throw new Error( `Cave GLB has invalid node ${nodeIndex}` );
+		const world = parent.clone().multiply( matrixForNode( node ) );
+		if ( node.mesh !== undefined ) for ( const primitive of parsed.meshes[ node.mesh ] || [] ) {
+			const positions = primitive.attributes?.POSITION?.array;
+			if ( ! positions ) continue;
+			for ( let index = 0; index < positions.length; index += 3 ) {
+				point.set( positions[ index ], positions[ index + 1 ], positions[ index + 2 ] ).applyMatrix4( world );
+				for ( let axis = 0; axis < 3; axis ++ ) { min[ axis ] = Math.min( min[ axis ], point.getComponent( axis ) ); max[ axis ] = Math.max( max[ axis ], point.getComponent( axis ) ); }
+			}
+		}
+		for ( const child of node.children || [] ) visit( child, world );
+	}
+	const scene = parsed.json.scenes?.[ parsed.json.scene || 0 ];
+	if ( ! scene?.nodes?.length ) throw new Error( 'Cave GLB has no active scene nodes for streaming bounds' );
+	for ( const node of scene.nodes ) visit( node, new Matrix4() );
+	if ( ! Number.isFinite( min[ 0 ] ) ) throw new Error( 'Cave asset has no positions for streaming bounds' );
+	const center = min.map( ( value, axis ) => ( value + max[ axis ] ) * 0.5 );
+	let radiusSq = 0;
+	function radiusVisit( nodeIndex, parent ) {
+		const node = parsed.json.nodes[ nodeIndex ];
+		const world = parent.clone().multiply( matrixForNode( node ) );
+		if ( node.mesh !== undefined ) for ( const primitive of parsed.meshes[ node.mesh ] || [] ) {
+			const positions = primitive.attributes?.POSITION?.array;
+			if ( ! positions ) continue;
+			for ( let index = 0; index < positions.length; index += 3 ) {
+				point.set( positions[ index ], positions[ index + 1 ], positions[ index + 2 ] ).applyMatrix4( world );
+				radiusSq = Math.max( radiusSq, ( point.x - center[ 0 ] ) ** 2 + ( point.y - center[ 1 ] ) ** 2 + ( point.z - center[ 2 ] ) ** 2 );
+			}
+		}
+		for ( const child of node.children || [] ) radiusVisit( child, world );
+	}
+	for ( const node of scene.nodes ) radiusVisit( node, new Matrix4() );
+	return { center, radius: Math.max( 0.01, Math.sqrt( radiusSq ) ) };
+}
+
 function addFloorPath( boxes, points, { widthIndex = 4, walls = true, skipNegativeBoatWallAfter = -1 } = {} ) {
 	for ( let segment = 0; segment < points.length - 1; segment ++ ) {
 		const a = points[ segment ], b = points[ segment + 1 ];
@@ -169,10 +257,13 @@ function buildCollision( layout ) {
 
 async function exportPackage( outDir ) {
 	const rawGLB = await readFile( path.join( sourceDir, 'caves.glb' ) );
+	const rawLOD = await readFile( path.join( packageDir, 'lod-source/cave-low.glb' ) );
 	const ambienceBytes = await readFile( path.join( sourceDir, 'under_reef.ogg' ) );
 	const layout = JSON.parse( await readFile( path.join( sourceDir, 'underneath-layout.json' ), 'utf8' ) );
 	const glb = rewriteGLBMaterials( rawGLB );
+	const lodGLB = retainSourceMaterials( glb, rawLOD );
 	const assetID = `sha256:${createHash( 'sha256' ).update( glb ).digest( 'hex' )}`;
+	const lodAssetID = `sha256:${createHash( 'sha256' ).update( lodGLB ).digest( 'hex' )}`;
 	const ambienceID = `sha256:${createHash( 'sha256' ).update( ambienceBytes ).digest( 'hex' )}`;
 	const worldSourcePath = path.join( outDir, 'world-source.json' );
 	let updatedAt = process.env.SOURCE_DATE_EPOCH ? new Date( Number( process.env.SOURCE_DATE_EPOCH ) * 1000 ).toISOString() : undefined;
@@ -188,8 +279,8 @@ async function exportPackage( outDir ) {
 		rules: { gravity: 1, avatarComplexity: 20000, physicsProfile: 'tidewater-default', movement: { walkSpeed: 3, sprintSpeed: 6.2, jumpSpeed: 4.6 }, maxPackageBytes: 4 * 1024 * 1024, requiredFeatures: [ 'tidewater.static-glb/1', 'tidewater.static-glb-emissive-strength/1', 'tidewater.ambient-audio/1', 'tidewater.portal-handoff/1', 'tidewater.portal-preview-static/1' ] },
 		hosts: [],
 		objects: [ {
-			id: 'tw-object:loz-underneath-cave', kind: 'asset-instance', label: 'UNDERNEATH cave, train station and closed door', assetId: assetID, priority: 'portal-preview',
-			transform: { position: [ 340, 4.2, -72 ], yaw: 0 }, scale: [ 1, 1, 1 ],
+			id: 'tw-object:loz-underneath-cave', kind: 'asset-instance', label: 'UNDERNEATH cave, train station and closed door', assetId: assetID, lods: [ { assetId: lodAssetID, maxScreenFraction: 0.45 } ], priority: 'portal-preview',
+			transform: { position: [ 340, 4.2, -72 ], yaw: 0 }, scale: [ 1, 1, 1 ], streamingBounds: boundsForGLB( glb ),
 			collision: { shape: 'compound', enabled: true, boxes: buildCollision( layout ) },
 		} ],
 		components: [ { id: 'tw-component:underneath-ambience', type: 'tidewater.ambient-audio/1', priority: 'portal-preview', beds: [ { assetId: ambienceID, gain: 0.1, condition: 'always' } ] } ],
@@ -207,6 +298,7 @@ async function exportPackage( outDir ) {
 	await rm( assetsDir, { recursive: true, force: true } );
 	await mkdir( assetsDir, { recursive: true } );
 	await writeFile( path.join( assetsDir, assetID.slice( 'sha256:'.length ) ), glb );
+	await writeFile( path.join( assetsDir, lodAssetID.slice( 'sha256:'.length ) ), lodGLB );
 	await writeFile( path.join( assetsDir, ambienceID.slice( 'sha256:'.length ) ), ambienceBytes );
 	await writeFile( worldSourcePath, `${JSON.stringify( source, null, 2 )}\n` );
 	console.log( `Exported ${source.title}: ${source.objects.length} object, ${source.objects[ 0 ].collision.boxes.length} collision boxes, ${glb.length + ambienceBytes.length} asset bytes, ${assetID}` );

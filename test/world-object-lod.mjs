@@ -104,6 +104,19 @@ updateWorldPackageLOD(boatRoot,boatCamera,0,2000);
 await boatRoot.userData.worldPackage.lodControllers.get(boatObject.id).pending.get(1);
 updateWorldPackageLOD(boatRoot,boatCamera,0,2000);
 assert.equal(boatRoot.userData.worldPackage.lodControllers.get(boatObject.id).transition?.to,1,'the packaged boat selects its distant level using transformed local bounds');
+const caveWorld=JSON.parse(readFileSync(new URL('../worlds/loz-underneath/world-source.json',import.meta.url)));
+const caveObject=caveWorld.objects[0];
+assert.ok(caveObject.lods?.length===1,'checked-in UNDERNEATH cave has a packaged distance level');
+const caveAsset=id=>readFileSync(new URL(`../worlds/loz-underneath/assets/${id.slice(7)}`,import.meta.url));
+const caveBaseBytes=caveAsset(caveObject.assetId),caveLowBytes=caveAsset(caveObject.lods[0].assetId);
+const caveConnector={worldId:caveWorld.worldId,manifest:{objects:[caveObject],portals:[]},getAsset:async id=>{assert.equal(id,caveObject.lods[0].assetId);return caveLowBytes;}};
+const caveRoot=await loadWorldPackage(caveConnector,{assets:new Map([[caveObject.assetId,caveBaseBytes]])});
+const caveCenter=transformBoundsCenter(caveObject,caveObject.streamingBounds.center,new Vector3());
+const caveCamera=new PerspectiveCamera(55,1,.1,5000);caveCamera.position.copy(caveCenter).add(new Vector3(0,0,1200));caveCamera.lookAt(caveCenter);
+updateWorldPackageLOD(caveRoot,caveCamera,0,3000);
+await caveRoot.userData.worldPackage.lodControllers.get(caveObject.id).pending.get(1);
+updateWorldPackageLOD(caveRoot,caveCamera,0,3000);
+assert.equal(caveRoot.userData.worldPackage.lodControllers.get(caveObject.id).transition?.to,1,'the cave selects its distant mesh through the mapped local bounds');
 const portalCamera=new PerspectiveCamera(60,1,.1,1000);portalCamera.position.z=20;
 updateWorldPackageLOD(root,portalCamera,0,now);await root.userData.worldPackage.lodControllers.get(object.id).pending.get(1);
 updateWorldPackageLOD(root,portalCamera,0,now);assert.equal(visibleTriangles(),12,'Portal view cross-fades its independently selected detail');
@@ -161,10 +174,26 @@ if(process.env.ELSEMESH_WORLD_OBJECT_LOD_RENDER==='1') {
  assert.equal(boatValidationError,null,boatValidationError?.message);
  assert.ok(boatRenderer.stats.pipelines>=4 && boatRenderer.stats.draws>=24,'actual packaged boat base and distance GLBs render through color and shadow passes');
  console.log(`Moored boat LOD GPU smoke: ${boatRenderer.stats.draws} draws, ${boatRenderer.stats.pipelines} pipelines`);
+ const caveLODController=caveRoot.userData.worldPackage.lodControllers.get(caveObject.id);
+ caveLODController.update(caveCamera,3200,0);
+ assert.equal(caveLODController.level,1,'the packaged cave settles onto its distance mesh');
+ const caveScene=new Scene();caveScene.add(caveRoot);caveRoot.traverse(node=>{if(node.isMesh)node.castShadow=true;});
+ const caveRenderer=new MeshRenderer(),caveShadows=new SunShadows(),caveTarget=new RenderTarget(width,height,{colors:['rgba16float','rgba16float','rgba8unorm'],depth:'depth32float',label:'underneath-cave-lod-smoke'});
+ GPU.device.pushErrorScope('validation');
+ GPU.beginFrame();setFrameCamera(caveCamera,width,height);
+ caveShadows.render(caveScene,caveRenderer,caveShadows.update(caveCamera,G.sunDir.value));
+ caveRenderer.render(caveScene,{camera:caveCamera,kind:'main',colorViews:caveTarget.textures.map(texture=>texture.view()),colorFormats:caveTarget.formats,
+  clearColors:[[.1,.15,.2,1],[0,0,0,0],[0,0,0,0]],depthView:caveTarget.depthTexture.view(),depthFormat:'depth32float',clearDepth:0});
+ GPU.submit();await GPU.device.queue.onSubmittedWorkDone();
+ const caveValidationError=await GPU.device.popErrorScope();
+ assert.equal(caveValidationError,null,caveValidationError?.message);
+ assert.ok(caveRenderer.stats.draws>=100,'actual packaged cave distance GLB renders through color and shadow passes');
+ console.log(`UNDERNEATH cave LOD GPU smoke: ${caveRenderer.stats.draws} draws, ${caveRenderer.stats.pipelines} pipelines`);
  await new Promise(resolve=>setTimeout(resolve,100));
 }
 disposeWorldPackage(root);disposeWorldPackage(root);
 disposeWorldPackage(boatRoot);
+disposeWorldPackage(caveRoot);
 assert.ok(root.userData.worldPackage.lodControllers.get(object.id).controller.signal.aborted);
 console.log('Object LOD: projected selection, hysteresis, async races, real GLB triangle reductions, collision and per-camera restoration passed');
 

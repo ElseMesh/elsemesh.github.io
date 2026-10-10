@@ -1,9 +1,9 @@
 # Reusable world-object levels of detail
 
 Status: signed contract, runtime switching, and complementary screen-door
-transitions implemented; the portable island village and static moored lobster
-boat have authored lower-detail variants. Matched-view visual validation and authored variants for
-other large world objects remain outstanding.
+transitions implemented; the portable island village, static moored lobster
+boat, and UNDERNEATH cave have authored lower-detail variants. Matched-view
+visual validation remains outstanding.
 Avatar distance LOD is implemented separately in `RemoteAvatar.js`.
 
 ## Existing renderer paths
@@ -97,10 +97,16 @@ visual. The moored lobster boat's portal-preview GLB also declares one lower-
 detail level at the same projected-size threshold. Its Blender 4.3.2 variant
 preserves all 12 material assignments, vertex colors and UVs, reducing it from
 46,845 to 16,395 triangles (65%) and from 2.55 MB to 1.26 MB. The base GLB
-remains the close-view source. Other checked-in world objects still lack
-authored variants. Near/far image comparisons and the Flip7 check remain open;
-the mesh structure and runtime selector alone do not prove distant visual
-quality.
+remains the close-view source. The UNDERNEATH cave scene declares one lower-
+detail level at the same threshold. Its Blender 4.3.2 variant reduces the
+scene from 13,248 to 4,551 triangles (66%) and from 736,336 to 420,080 bytes.
+The cave packager restores material definitions by name from the full-detail
+GLB after Blender export, preserving its authored emissive strength and
+per-object color.
+The full cave GLB remains the collision and close-view source. Small repeated
+debris assets remain unvaried. Near/far image comparisons and the Flip7 check
+remain open; mesh structure and the runtime selector alone do not prove
+distant visual quality.
 
 To regenerate the checked-in village level, export the full package to a
 temporary directory and use its full-detail village GLB as the Blender input:
@@ -116,6 +122,14 @@ npm run export:island
 Regenerate the boat preview variant the same way, using its content-addressed
 full-detail GLB from the temporary export and writing to
 `worlds/island/lod-source/moored-boat-low.glb` with `--ratio 0.35`.
+
+Regenerate the UNDERNEATH cave variant from a clean package export, writing the
+Blender result to `/var/tmp/underneath-cave-low.glb`, then copy that file to
+`worlds/loz-underneath/lod-source/cave-low.glb` and run
+`node tools/export-loz-underneath.mjs`. The cave exporter maps the reduced
+primitives to the original material definitions by material name; do not
+publish a Blender GLB directly as the packaged cave LOD because Blender can
+change the authored emissive strengths.
 
 The checked-in low-detail GLB is a stable export input. Package export hashes it
 into the signed content-addressed asset directory, so repeated exports do not

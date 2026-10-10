@@ -46,7 +46,7 @@ try {
 	assert.equal( ambience?.beds.length, 1, 'the cave package carries one ambient loop' );
 	assert.equal( ambience.beds[ 0 ].gain, 0.1 );
 	assert.equal( ambience.beds[ 0 ].condition, 'always' );
-	const referencedIDs = new Set( [ ...source.objects.map( object => object.assetId ), ...source.components.flatMap( component => ( component.beds || [] ).map( bed => bed.assetId ) ) ] );
+	const referencedIDs = new Set( [ ...source.objects.flatMap( object => [ object.assetId, ...( object.lods || [] ).map( lod => lod.assetId ) ] ), ...source.components.flatMap( component => ( component.beds || [] ).map( bed => bed.assetId ) ) ] );
 	const files = ( await readdir( path.join( output, 'assets' ) ) ).sort();
 	assert.deepEqual( files, [ ...referencedIDs ].map( id => id.slice( 'sha256:'.length ) ).sort(), 'package contains exactly the assets referenced by its source' );
 	for ( const assetID of referencedIDs ) {
@@ -62,6 +62,18 @@ try {
 	assert.ok( caveGLB.materials.some( material => material.name.includes( 'Glow_Mineral' ) && material.extensions?.KHR_materials_emissive_strength?.emissiveStrength === 1.5 ), 'glowing minerals retain their authored strength' );
 	const caveMaterialVariants = caveGLB.materials.filter( material => material.extensions?.KHR_materials_emissive_strength );
 	assert.ok( caveMaterialVariants.length > 0 && caveMaterialVariants.every( material => material.emissiveFactor?.length === 3 ), 'every styled cave material has explicit portable emissive colors' );
+	const caveLOD = source.objects[ 0 ].lods?.[ 0 ];
+	assert.deepEqual( caveLOD && Object.keys( caveLOD ).sort(), [ 'assetId', 'maxScreenFraction' ], 'the cave distance level uses the signed object LOD contract' );
+	assert.equal( source.objects[ 0 ].lods.length, 1 );
+	assert.ok( source.objects[ 0 ].streamingBounds.radius > 0, 'cave LOD selection uses bounds in asset-local coordinates' );
+	assert.ok( Math.abs( source.objects[ 0 ].streamingBounds.center[ 0 ] + 270 ) < 0.01 && source.objects[ 0 ].streamingBounds.radius < 100, 'cave bounds include every GLB node transform rather than raw mesh-local vertices' );
+	const caveLODBytes = await readFile( path.join( output, 'assets', caveLOD.assetId.slice( 'sha256:'.length ) ) );
+	const caveLODGLB = parseGLB( caveLODBytes );
+	const triangles = glb => glb.meshes.flat().reduce( ( total, primitive ) => total + primitive.indices.length / 3, 0 );
+	assert.ok( triangles( caveLODGLB ) < triangles( caveGLB ) * 0.5, 'cave distance level reduces geometry by more than half' );
+	assert.deepEqual( caveLODGLB.materials, caveGLB.materials, 'cave LOD retains the exact authored material catalog, including emissive strengths' );
+	assert.ok( caveLODGLB.meshes.flat().every( primitive => Number.isInteger( primitive.material ) && caveLODGLB.materials[ primitive.material ] ), 'cave LOD primitives retain valid authored material assignments' );
+	assert.equal( caveLOD.maxScreenFraction, 0.45 );
 	const audio = ambience.beds[ 0 ];
 	const audioBytes = await readFile( path.join( output, 'assets', audio.assetId.slice( 'sha256:'.length ) ) );
 	assert.deepEqual( audioBytes, await readFile( path.join( packageDir, 'source/under_reef.ogg' ) ), 'the shipped loop is the original archived LOZ audio recording' );
