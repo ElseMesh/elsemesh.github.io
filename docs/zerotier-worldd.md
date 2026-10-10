@@ -23,8 +23,9 @@ selected the ordinary `wlo1` default gateway (`192.168.20.1`), confirming that
 this userspace libzt address is not installed as a host OS route. The current
 implementation advertises and listens on both assigned managed IPv4 and
 6PLANE IPv6 addresses, and routes in-prefix IPv4 libp2p TCP dials through
-libzt. Same-host and Linux–Flip7 live managed-IPv4 peers are verified below;
-independent-NAT reachability remains unverified. The locally stored Legacy API
+libzt. Same-host and Linux–Flip7 managed-address libp2p sessions are recorded
+below; direct physical path and independent-NAT reachability are separate,
+unverified gates. The locally stored Legacy API
 token still returns HTTP 403; that blocks API reads but does not prevent
 checking the settings in Central's web UI.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
@@ -160,7 +161,13 @@ The development host has an additional local `spod` isolation interface. Its
 output chain deliberately drops general UDP from that interface. That is a
 property of this host's command-execution environment, not an ElseMesh or
 ZeroTier network requirement; do not add a `spod` exception to deployment
-firewalls. The system's physical route to ZeroTier roots uses `wlo1`.
+firewalls. The host's `/etc/nftables.conf` contains the catch-all `spod`
+output drop, and `/var/log/fw.log` records UDP packets from `137.205.192.1` to
+ZeroTier root port 9993 as `SDROP` on 2026-10-10/11. Those log entries do not
+identify the originating process, so they cannot be attributed specifically to
+`thruholdd`. The system's ordinary physical route to ZeroTier roots uses
+`wlo1`; a route lookup alone does not prove which interface libzt's socket
+used.
 
 `thruholdd` includes libzt and joins the dedicated network by default, without
 installing the separate ZeroTier One service or passing `--zerotier-network`.
@@ -202,9 +209,15 @@ The current libzt source already exposes active physical path observations with
 buffer, length)`. The caller holds libzt's core lock around both queries. Each
 successful path query returns an endpoint string in `IP/UDP-port` form; expired
 paths are excluded. This is learned from the running node's peer state, not a
-ZeroTier Central lookup. The address and port can change and only describe a
-currently observed ZeroTier path. `thruholdd` does not currently query or
-publish these endpoints; normal peer traffic uses the managed ZeroTier overlay.
+ZeroTier Central lookup. In the current libzt implementation, a missing peer
+returns `ZTS_ERR_NO_RESULT`; a peer present in the core peer list can return a
+count of zero when it has no queryable direct path. The query filters out
+expired paths, non-IP address families, and endpoints with UDP port zero. A
+zero count does not distinguish a relay-only peer from a peer with no recently
+observed direct path. The address and port can change and only describe a
+currently observed ZeroTier path. `thruholdd` queries them only through the
+opt-in loopback diagnostic; normal peer traffic continues over the managed
+ZeroTier overlay.
 
 This API is sufficient to observe the endpoint and port; no libzt source patch
 is currently needed for that information. It does not export a socket handle,
@@ -238,14 +251,17 @@ On 2026-10-11, focused handler tests passed in both ordinary and `zerotier`
 builds, and Linux amd64 plus Android arm64 diagnostic binaries were built.
 The runtime endpoint was exercised against a live peer on both platforms. The
 Linux response contained duplicate RFC1918/local candidates; it did not reveal
-a public endpoint. On Flip7, the connected Linux peer was visible
-(`dhtPeers:1`), but the physical-path query returned an empty list. Thus the
-query API works, while the presence of an active managed-overlay peer does not
-guarantee a reported or reusable physical path. Public Host and forwarded
-requests were rejected. These tests did not establish independent-NAT
-connectivity or direct-transport viability. Temporary daemons, profiles, and
-ADB forwards were removed after the check; existing Flip7 daemons and display
-state were left alone.
+a public endpoint. On Flip7, the query returned HTTP 200 with an empty list for
+the Linux peer ID. This confirms that libzt had a peer record but no currently
+queryable direct physical endpoint for it; the result cannot distinguish
+relay-only transport from no direct path. Separately, `/healthz` reported
+`dhtPeers:1`, which counts ElseMesh/libp2p peers and is not ZeroTier peer or
+path status. The managed-address peer session is evidence of overlay-carried
+application traffic, but direct-vs-relayed physical transport remains
+unverified. Public Host and forwarded requests were rejected. These tests did
+not establish independent-NAT connectivity or direct-transport viability.
+Temporary daemons, profiles, and ADB forwards were removed after the check;
+existing Flip7 daemons and display state were left alone.
 
 The embedded node identity is persisted in
 `$XDG_CONFIG_HOME/elsemesh/zerotier/identity.public` and
