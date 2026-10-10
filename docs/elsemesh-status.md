@@ -46,6 +46,21 @@ Graphics comparisons can use the named and captured camera URL parameters docume
 
 The updated goal includes visible players and avatars. The archived LOZ multiplayer/avatar audit and the versioned owner-hosted presence contract are recorded in [player-presence.md](player-presence.md). `server/worldd/presence.go` binds ephemeral players to actual browser sessions and authenticated forwarding gateways; both WebSocket and WebTransport share the owner's bounded, expiring presence set. Real two-client/libp2p forwarding and mixed HTTP/3/WebSocket tests cover isolation, snapshots and departures. The production connector exposes validated update/leave requests; a client snapshot/interpolation model reuses the LOZ appearance schema. `WorldPresenceSession` publishes active-world poses and owns animated `RemoteAvatar` instances; a two-browser local Chrome check confirmed a textured avatar appeared and was removed on disconnect. Secure WSS owner/cache end-to-end coverage and focused Go race checks pass. Public multi-browser visual proof, open-portal read-only presence, owner-failure recovery, near/far fidelity and Flip7 visual verification remain open; see [player-presence.md](player-presence.md) for the scope and limits of the local check.
 
+## Live ZeroTier/Flip7 check (2026-10-10)
+
+The Android arm64 `libzt.so` and `thruholdd` build ran on the SM-F766B. A
+separate Linux daemon also joined the dedicated LAN; the Flip7 briefly reported
+one DHT peer, then zero. Both devices had the same observed public IPv4 egress,
+so this is only transient inter-device evidence, not a sustained or
+separate-NAT test. Afterward, a clean Android arm64 libzt rebuild against the
+ZeroTierOne `exp3` fork and a linked `thruholdd` cross-build both passed; the
+external build tree uses an independent fork snapshot, with no source-tree
+symlink. The Legacy Central read-only API still returns HTTP 403
+using the owner-only mode-0600 token file. USB ADB is available, but the phone
+was locked during the current renderer attempt and both display captures were
+black. See [ZeroTier networking](zerotier-worldd.md) for addresses and the
+remaining gates.
+
 ## Remaining implementation gates
 
 ### 1. Complete the island as a portable example world

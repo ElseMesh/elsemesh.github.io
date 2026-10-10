@@ -32,12 +32,13 @@ traffic intended for a user's existing private network.
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
 (mode `0600`), do not copy it into a repository or world/client configuration,
-and do not include it in command output or logs. The locally available token
-returned HTTP 403 for read-only requests to the documented Legacy API endpoint
-on 2026-10-04, as it did in the earlier 2026-10-03 check. This points to a
-credential/account access problem; it does not establish that the network
-settings changed. Generate a working Legacy API token in Central and replace
-the local file without sharing the token in chat or source control.
+and do not include it in command output or logs. A read-only request to the
+documented Legacy API endpoint returned HTTP 403 on 2026-10-10; the local file
+is still mode `0600`. The repeated 403 indicates the saved credential is not
+accepted, but does not establish that network settings changed. Central's
+current pool, 6PLANE setting, and flow rules therefore remain unverified.
+Replace the local file only after obtaining a working Legacy API token in
+Central; never share the token in chat or source control.
 
 The last recorded flow-rule inspection found TCP destination port `42901` in
 the allow list for `worldd`'s libp2p listener, while the existing final UDP
@@ -210,6 +211,16 @@ cmake -S /path/to/libzt -B /path/to/libzt-android-arm64-build \
 cmake --build /path/to/libzt-android-arm64-build --target zt-shared --parallel
 ```
 
+This build was validated against the ElseMesh owner's ZeroTierOne `exp3` fork
+at commit `be0d1923d88d62f7c9e9499d96a1fb541a870153`. Keep a regular source
+snapshot under the external libzt build tree's `ext/ZeroTierOne`; do not
+symlink a source checkout there, because vendor build/configuration steps must
+not write into source trees. libzt detects the fork's `node/ECC.hpp` API and
+selects its C++17, `ZT_Node_Config`, and ECC-key compatibility path. When the
+pinned upstream `C25519` API is present instead, it retains the C++11 and
+upstream constructor path. The fork also now skips unsupported CPU-affinity
+pinning on Android (ZeroTierOne commit `be0d1923d`).
+
 The resulting `libzt.so` is an AArch64 Android shared library and depends
 only on Android system libraries. Build `thruholdd` against that library and
 the matching NDK compiler with:
@@ -237,6 +248,34 @@ peer connection on one device. It does not establish connectivity between
 different devices or different NATs, and it did not exercise the game
 renderer. Test identities and files were kept under Termux `$PREFIX/tmp`; no
 permanent phone identity was created or changed.
+
+On 2026-10-10, a fresh Flip7 node and a Linux `thruholdd` node on this
+development host joined `e3918db4832a3056` with distinct ZeroTier IDs and
+6PLANE addresses. While the Linux process was running, the Flip7 health
+endpoint briefly reported one DHT peer; a later sample returned zero. This is
+evidence of an inter-device peer connection, but not a stable/sustained path
+or a world/portal asset exchange. The two devices produced the same hash when
+their public IPv4 egress responses were compared, so the run does not prove
+separate-NAT traversal. The restricted shell timed out joining. Its UDP/9993
+packets were logged as `SDROP` on `OUT=spod` at 12:09:23 and 12:09:28 local
+time. The same Linux test identity joined when run with host-network access
+at 12:09:34; no later matching `spod` UDP/9993 drops appeared in the inspected
+log tail. This isolates that failed attempt to the restricted shell's `spod`
+policy; it is not a deployment firewall rule and must not be copied into the
+host ruleset.
+
+The Flip7's USB ADB transport is currently available, but the device was
+locked during the renderer check. Android kept the browser in the background
+and both panel captures were black, so this run did not verify rendering or
+visual quality. The temporary daemon was stopped; the persistent phone
+ZeroTier identity was not touched.
+
+After the fork-compatibility changes, a clean 128-step `zt-shared` rebuild
+passed, and `thruholdd` was rebuilt against that artifact. `llvm-readelf`
+confirmed both outputs are Android AArch64/API 26 binaries; `thruholdd`
+depends on `libzt.so` plus Android system libraries. The independent fork
+snapshot remained a real directory in the external build tree, with no link
+back into either source repository.
 
 ## Remaining validation
 
