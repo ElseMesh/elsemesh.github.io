@@ -16,6 +16,13 @@ archive. Check Actions for success and compare the client bottom-right eight-dig
 stamp with the source HEAD. GitHub repository URL redirects do not guarantee
 redirects for old `rebroad.github.io/tidewater/` links; use the new address.
 
+On 2026-10-10, Pages run `38058831316` successfully built and deployed main at
+`c2822f60206698010b01f4d503d2f91213e3536f` and the preserved
+`archive/loz/main` ref at `f691cd9`. The archive includes the imported `loz/main`
+history and its later arrow-key look-controls change; its build also passed
+`test/input-look-keys.mjs`. After deployment, both `/` and `/loz/` returned
+HTTP 200 and referenced their respective JavaScript bundles.
+
 ## Selected ThruHolds
 
 The static client accepts `worldId`, `nodeId`, `gateway` and `directory` query
