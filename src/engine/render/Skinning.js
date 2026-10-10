@@ -48,7 +48,7 @@ const SKIN_VERTEX = ( J ) => /* wgsl */`
 
 // Default glTF-style PBR surface: base colour (sRGB, alpha), ORM (G roughness, B metalness), tangent-space
 // normal map through a derivative TBN. Extra surface code (e.g. skin / cloth tweaks) runs after it.
-export function skinnedMaterial( { name, joints, jointBuffer, textures = {}, alphaMode = 'OPAQUE', alphaCutoff = 0.5, doubleSided = false, surface = '', uniforms = {}, color = null, roughness = 1, metalness = 1, defines = {}, modules = [] } ) {
+export function skinnedMaterial( { name, joints, jointBuffer, textures = {}, alphaMode = 'OPAQUE', alphaCutoff = 0.5, doubleSided = false, surface = '', shadow = '', uniforms = {}, color = null, roughness = 1, metalness = 1, defines = {}, modules = [] } ) {
 
 	const T = {};
 	if ( textures.albedo ) T.chAlbedo = textures.albedo;
@@ -83,6 +83,7 @@ ${ surface }
 		metalness,
 		vertex: SKIN_VERTEX( joints ),
 		surface: code,
+		shadow,
 		side: doubleSided ? 'double' : 'front',
 		alphaTest: alphaMode === 'MASK' || alphaMode === 'BLEND' ? alphaCutoff : 0,
 		defines: { HAS_ALBEDO: T.chAlbedo ? 1 : 0, HAS_ORM: T.chOrm ? 1 : 0, HAS_NORMAL: T.chNormal ? 1 : 0, ...defines },

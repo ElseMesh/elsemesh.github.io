@@ -5,6 +5,7 @@ import { parseGLB } from '../src/engine/loaders/GLTF.js';
 import { GPU } from '../src/engine/gpu/GPU.js';
 import { SkinnedModel } from '../src/engine/render/Skinning.js';
 import { RemoteAvatar, avatarTriangles } from '../src/player/RemoteAvatar.js';
+import { avatarMaterialOptions } from '../src/player/AvatarMaterials.js';
 import { DEFAULT_APPEARANCE } from '../src/player/AvatarAppearance.js';
 
 const male = parseGLB(readFileSync(new URL('../public/models/characters/stock-player.glb', import.meta.url)));
@@ -12,8 +13,9 @@ const female = parseGLB(readFileSync(new URL('../public/models/characters/stock-
 assert.equal(avatarTriangles(male), 7364); assert.equal(avatarTriangles(female), 8732);
 for (const source of [male, female]) for (const clip of ['idle', 'walk', 'run', 'helm']) assert.ok(source.animations.some(a => a.name === clip));
 const created = [];
-function model() {
-	const result = { group: new Group(), materials: [{ uniforms: { shirt: { value: null } } }], disposed: 0, clipNames: () => ['idle', 'walk', 'run', 'helm'], play(clip) { this.current = clip; }, update(dt) { this.dt = dt; }, dispose() { this.disposed++; } };
+function model(duration = 2) {
+	const fade = { x: 1, y: 0, set(x, y) { this.x = x; this.y = y; } };
+	const result = { group: new Group(), materials: [{ uniforms: { shirt: { value: null }, lodFade: { value: fade } } }], disposed: 0, layers: [], clipNames: () => ['idle', 'walk', 'run', 'helm'], clipDuration: () => duration, play(clip, { from = 0 } = {}) { this.current = clip; this.layers = [{ clip: { name: clip }, time: from, target: 1 }]; }, update(dt) { this.dt = dt; for (const layer of this.layers) layer.time += dt; }, dispose() { this.disposed++; } };
 	created.push(result); return result;
 }
 let resolveMale;
@@ -46,28 +48,59 @@ assert.deepEqual(releases, ['joints', 'geometry', 'texture', 'material'], 'Skinn
 console.log('Remote avatar: assets, style races, color reuse, movement, disposal and complexity limits passed');
 
 const lodAssets = [];
-const lod = new RemoteAvatar({loadSource: async asset => { lodAssets.push(asset); return male; }, createModel: async () => model()});
+let lodModels = 0;
+const lod = new RemoteAvatar({loadSource: async asset => { lodAssets.push(asset); return male; }, createModel: async () => model(lodModels++ === 0 ? 2 : 4)});
 await lod.ready;
 const fullModel = lod.model;
+fullModel.play('walk', { from: .5 });
 lod.setViewDistance(20); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player-medium');
-assert.equal(fullModel.disposed, 1);
+assert.equal(lod.model.current, 'walk', 'LOD replacement keeps the active animation');
+assert.equal(lod.model.layers[0].time, 1, 'LOD replacement preserves normalized animation phase across clip durations');
+assert.equal(fullModel.disposed, 0, 'outgoing model stays alive during its transition');
+assert.deepEqual([fullModel.materials[0].uniforms.lodFade.value.x, fullModel.materials[0].uniforms.lodFade.value.y], [0, 1]);
+lod.update(.1, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
+assert.equal(fullModel.materials[0].uniforms.lodFade.value.x, .5, 'outgoing level fades over multiple frames');
+assert.equal(lod.model.materials[0].uniforms.lodFade.value.x, .5, 'incoming level uses complementary fade');
+lod.update(.1, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
+assert.equal(fullModel.disposed, 1, 'outgoing model is disposed after the transition');
+assert.equal(lod.model.materials[0].uniforms.lodFade.value.x, 1);
 lod.setViewDistance(16); await lod.ready;
 assert.equal(lodAssets.length, 2, 'Distance hysteresis avoids repeated switching');
 lod.setViewDistance(50); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player-low');
+lod.update(.2, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
 lod.setViewDistance(40); await lod.ready;
 assert.equal(lodAssets.length, 3);
 lod.setViewDistance(10); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player');
+lod.update(.2, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
 lod.setViewDistance(12, 2); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player-medium', 'Load bias chooses lower geometry for mid-distance avatar');
+lod.update(.2, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
 lod.setViewDistance(7, 2); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player', 'Nearby avatar retains full detail even at maximum bias');
+lod.update(.2, { position: [0, 0, 0], yaw: 0, moving: true, mode: 'walk', appearance: lod.appearance });
 lod.setViewDistance(12, 0); await lod.ready;
 assert.equal(lodAssets.at(-1), 'stock-player', 'Headroom restores original distance policy');
 lod.dispose();
 console.log('Avatar distance LOD switching, recovery and hysteresis passed');
+
+const avatarMaterial = avatarMaterialOptions({ name: 'boots' });
+assert.ok(avatarMaterial.modules.some(module => module.name === 'lodFade'));
+assert.ok(avatarMaterial.surface.includes('lodFadeVisible'));
+assert.ok(avatarMaterial.shadow.includes('lodFadeVisible'));
+console.log('Avatar screen-door LOD fade applies to all materials and shadows');
+
+const interrupted = new RemoteAvatar({ loadSource: async () => male, createModel: async () => model() });
+await interrupted.ready;
+const interruptedOutgoing = interrupted.model;
+interrupted.setViewDistance(20); await interrupted.ready;
+const interruptedIncoming = interrupted.model;
+interrupted.dispose();
+assert.equal(interruptedOutgoing.disposed, 1, 'Disposal during an LOD fade releases the outgoing model');
+assert.equal(interruptedIncoming.disposed, 1, 'Disposal during an LOD fade releases the incoming model');
+console.log('Avatar disposal during an LOD fade releases both models');
 
 const deferred = [];
 const queued = {jointBuffer: {destroy: () => deferred.push('released')}, meshes: [], materials: []};

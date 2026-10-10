@@ -16,6 +16,7 @@ import { SunShadows } from '../src/engine/render/Shadows.js';
 import { FullscreenPass } from '../src/engine/render/FullscreenPass.js';
 import { SkinnedModel } from '../src/engine/render/Skinning.js';
 import { parseGLB } from '../src/engine/loaders/GLTF.js';
+import { avatarMaterialOptions } from '../src/player/AvatarMaterials.js';
 import * as E from '../src/engine/index.js';
 
 const file = process.argv[ 2 ] || new URL( '../public/models/characters/joe.glb', import.meta.url ).pathname;
@@ -45,11 +46,18 @@ scene.add( ground );
 
 const buf = readFileSync( file );
 const gltf = parseGLB( buf.buffer.slice( buf.byteOffset, buf.byteOffset + buf.byteLength ) );
-const model = await SkinnedModel.create( gltf );
-model.group.rotation.y = YAW;
-scene.add( model.group );
+const fadeTest = process.env.AVATAR_LOD_FADE === '1';
+const materials = fadeTest ? avatarMaterialOptions : undefined;
+const model = await SkinnedModel.create( gltf, { materials } );
+const models = [ model ];
+if ( fadeTest ) models.push( await SkinnedModel.create( gltf, { materials } ) );
+for ( const [ index, rig ] of models.entries() ) {
+	rig.group.rotation.y = YAW;
+	scene.add( rig.group );
+	if ( fadeTest ) for ( const material of rig.materials ) material.uniforms.lodFade.value.set( 0.5, index === 0 ? 0 : 1 );
+}
 console.log( 'clips', model.clipNames().map( ( n ) => n + ' ' + model.clipDuration( n ).toFixed( 2 ) + 's' ).join( ', ' ) );
-if ( CLIP ) model.play( CLIP, { fade: 0.01 } );
+if ( CLIP ) for ( const rig of models ) rig.play( CLIP, { fade: 0.01 } );
 
 const camera = new E.PerspectiveCamera( 30, W / H, 0.1, 100 );
 camera.position.set( 0, 1.2, 4.2 ); camera.lookAt( 0, 0.95, 0 );
@@ -80,7 +88,7 @@ for ( let f = 0; f < frames; f ++ ) {
 
 	for ( let k = 0; k < 3; k ++ ) {
 
-		model.update( k === 0 ? ( f === 0 ? 0 : step ) : 0 );
+		for ( const rig of models ) rig.update( k === 0 ? ( f === 0 ? 0 : step ) : 0 );
 		GPU.beginFrame();
 		setFrameCamera( camera, W, H );
 		shadows.render( scene, mr, shadows.update( camera, G.sunDir.value ) );
