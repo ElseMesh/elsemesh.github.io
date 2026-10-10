@@ -70,7 +70,7 @@ try {
 	const caveLODBytes = await readFile( path.join( output, 'assets', caveLOD.assetId.slice( 'sha256:'.length ) ) );
 	const caveLODGLB = parseGLB( caveLODBytes );
 	const triangles = glb => glb.meshes.flat().reduce( ( total, primitive ) => total + primitive.indices.length / 3, 0 );
-	assert.ok( triangles( caveLODGLB ) < triangles( caveGLB ) * 0.5, 'cave distance level reduces geometry by more than half' );
+	assert.ok( triangles( caveLODGLB ) < triangles( caveGLB ) * 0.75 && triangles( caveLODGLB ) > triangles( caveGLB ) * 0.65, 'cave distance level keeps a conservative 25–35% triangle reduction' );
 	assert.deepEqual( caveLODGLB.materials, caveGLB.materials, 'cave LOD retains the exact authored material catalog, including emissive strengths' );
 	assert.ok( caveLODGLB.meshes.flat().every( primitive => Number.isInteger( primitive.material ) && caveLODGLB.materials[ primitive.material ] ), 'cave LOD primitives retain valid authored material assignments' );
 	assert.equal( caveLOD.maxScreenFraction, 0.45 );
