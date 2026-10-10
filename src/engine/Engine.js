@@ -6,6 +6,14 @@ import { MeshRenderer } from './render/MeshRenderer.js';
 import { FrameUniforms } from './render/Frame.js';
 import { selectBackend } from './Backend.js';
 
+export async function loadThreeModule() {
+
+	const THREE = await import( 'three' );
+	if ( typeof THREE.WebGLRenderer !== 'function' ) throw new Error( 'Three.js WebGLRenderer is unavailable' );
+	return THREE;
+
+}
+
 // Canvas, device, main camera / scene and the frame loop.
 export class Engine {
 
@@ -34,7 +42,7 @@ export class Engine {
 				// A canvas that attempted to acquire a WebGPU context cannot later be
 				// used for WebGL, so give the fallback a fresh canvas.
 				canvas.remove();
-				const { default: THREE } = await import( 'three' );
+				const THREE = await loadThreeModule();
 				const webglCanvas = document.createElement( 'canvas' );
 				webglCanvas.tabIndex = 0;
 				this.renderer = new THREE.WebGLRenderer( { canvas: webglCanvas, antialias: true, powerPreference: 'high-performance' } );

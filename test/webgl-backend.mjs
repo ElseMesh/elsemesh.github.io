@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { selectBackend } from '../src/engine/Backend.js';
+import { loadThreeModule } from '../src/engine/Engine.js';
+
+const three = await loadThreeModule();
+assert.equal( typeof three.WebGLRenderer, 'function', 'the dynamically loaded Three.js namespace exposes the named renderer export' );
 
 {
 	const selected = await selectBackend( { initWebGPU: async () => {}, initWebGL: async () => assert.fail( 'WebGL must not initialize when WebGPU succeeds' ) } );
