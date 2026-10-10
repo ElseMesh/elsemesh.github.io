@@ -1,0 +1,10 @@
+# Replace this hostname in both this file and the gateway environment file.
+world.example.org {
+	@worldd path /healthz /.well-known/tidewater/node /api/lookup /api/world/manifest /api/world/roles/revocations /api/world/proposals /api/assets/* /gateway /browser-host
+	handle @worldd {
+		reverse_proxy 127.0.0.1:5200
+	}
+	handle {
+		respond "not found" 404
+	}
+}

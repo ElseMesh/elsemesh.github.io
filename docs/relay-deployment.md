@@ -110,6 +110,52 @@ through NAT, add both public-IP addresses above to the service command with
 repeatable `--announce-address` flags; otherwise the daemon cannot advertise
 the router's external IP from its private interface.
 
+## Publish a browser gateway with TLS
+
+`deploy/systemd/elsemesh-gateway.service.example` and
+`deploy/caddy/elsemesh-gateway.Caddyfile.example` provide a community-operated
+gateway configuration. This is a persistent community node, not a requirement
+for each world owner to run a public server. It supports the existing WSS
+fallback for browsers and can also seed/relay native libp2p peers. The browser
+host remains connected only while its owner tab is open.
+
+Build and install the ordinary Linux daemon from the repository's external
+build tree, then install the service example as
+`/etc/systemd/system/elsemesh-gateway.service`. Install
+`deploy/systemd/elsemesh-gateway.env.example` as the root-owned
+`/etc/elsemesh/gateway.env` with mode `0640`, changing the host in both files.
+Add each client
+origin that should be allowed by repeating `--allow-browser-origin` in
+`ExecStart`; the example allows `https://elsemesh.github.io`. The origin is an
+exact browser-page origin, without a path. Keep the daemon on
+`127.0.0.1:5200`; do not expose that listener directly.
+
+Install the Caddy example into the active Caddyfile and replace its hostname.
+It obtains/renews a public TLS certificate, forwards only the daemon's health,
+discovery, signed manifest, asset, role-state, proposal, visitor-WebSocket and
+browser-host-WebSocket routes, and returns 404 for other paths. Caddy's
+`reverse_proxy` supports WebSocket upgrades. The daemon validates browser
+origins itself; the proxy must preserve the request `Origin` header. Caddy's
+default reverse proxy does this. See the [Caddy reverse proxy
+reference](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
+
+Allow TCP 80/443 to Caddy for HTTP/TLS and certificate renewal. Allow TCP and
+UDP 42901 to `thruholdd` for native libp2p TCP and QUIC, plus outbound
+connections needed for DHT bootstrap and peer discovery. Do not open TCP 5200
+to the Internet. The example deliberately omits the optional WebTransport
+listener: the WSS fallback works through this proxy, while direct HTTP/3
+WebTransport needs its own publicly reachable UDP listener and certificate
+configuration. If a host firewall is enabled, add these narrow rules there as
+well as at the edge firewall/router.
+
+After installing the service, run `systemctl daemon-reload` and
+`systemctl enable --now elsemesh-gateway`; validate Caddy with `caddy validate`
+and reload it. Confirm `https://world.example.org/healthz`, then test an
+actual browser invite through `wss://world.example.org/gateway` and an owner
+tab through `/browser-host` from a network outside the host. A green health
+check proves only the HTTP process is reachable; it does not prove DHT
+discovery, remote asset retrieval, or relay traversal.
+
 ## Configure world nodes
 
 Pass multiple bootstrap and relay addresses so a single unavailable operator
@@ -165,10 +211,14 @@ log relay reservation and connection failures; do not treat a successful
 and a forced relay path between separate NATs, then stop one bootstrap or relay
 node and confirm another path still works.
 
-This repository supplies the daemon flags and loopback circuit test; no
-deployed bootstrap, relay, gateway, DNS, TLS, or monitoring infrastructure
-exists yet. Public two-NAT relay traversal and browser-to-world traversal
-through a remotely deployed relay remain verification gates. The
+This repository supplies the daemon flags, a systemd/Caddy deployment example,
+and loopback circuit test; no deployed bootstrap, relay, gateway, DNS, TLS, or
+monitoring infrastructure exists yet. The deployment example has not been
+validated against a public host; run `caddy validate` after installing it on
+the target host. Caddy was not installed in the development environment, so
+its parser could not be run here. Public two-NAT relay traversal and
+browser-to-world traversal through a remotely deployed relay remain
+verification gates. The
 mesh must work without the Central API; Central is only an administrative
 interface for the optional ZeroTier LAN. Bootstrap peers must use the
 ElseMesh-compatible DHT protocol prefix currently set to

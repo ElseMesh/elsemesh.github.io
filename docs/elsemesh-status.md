@@ -92,6 +92,13 @@ frontend build, full npm test suite, Go `worldd` tests, and loopback WSS gateway
 test passed for the current implementation. Go validation also covers the
 Example Island's `village-materials/2` component.
 
+`deploy/systemd/elsemesh-gateway.service.example` and
+`deploy/caddy/elsemesh-gateway.Caddyfile.example` now provide a concrete
+community deployment path: loopback-only daemon, exact browser-origin allow
+list, TLS termination, and a narrow HTTP route allowlist. The WSS gateway and
+native relay still need an operator to deploy this on a publicly reachable
+host; no public endpoint or external-browser test is claimed.
+
 Still open: a real browser owner session against a deployed public WSS gateway,
 a second browser fetching from that host, gateway deployment and external
 network testing, browser-host presence, and direct WebRTC signaling/transport.

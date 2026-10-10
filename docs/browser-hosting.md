@@ -130,6 +130,8 @@ suspension, owner handover, and reconnect behavior. Repeat with a ThruHold porta
 and with gateway failure. Test direct WebRTC separately only after its signaling
 and relay paths exist. Public hosting claims require tests against a deployed
 HTTPS/WSS gateway from a network outside the developer machine.
+For a community-operated TLS gateway and relay deployment example, see
+[`relay-deployment.md`](relay-deployment.md#publish-a-browser-gateway-with-tls).
 
 ## Current implementation validation
 

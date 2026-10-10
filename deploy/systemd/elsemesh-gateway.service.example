@@ -1,0 +1,26 @@
+[Unit]
+Description=ElseMesh public browser gateway and libp2p relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=elsemesh
+Group=elsemesh
+StateDirectory=elsemesh
+StateDirectoryMode=0700
+UMask=0077
+EnvironmentFile=/etc/elsemesh/gateway.env
+ExecStart=/usr/local/bin/thruholdd --worlds-dir /var/lib/elsemesh/worlds --world-profile community-gateway --p2p-port 42901 --dht-mode server --relay-service --http 127.0.0.1:5200 --public-gateway ${ELSEMESH_PUBLIC_GATEWAY} --allow-browser-origin https://elsemesh.github.io
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
