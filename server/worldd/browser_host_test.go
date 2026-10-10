@@ -117,6 +117,9 @@ func TestBrowserHostReverseGatewayServesManifestAndBoundedAssets(t *testing.T) {
 	if session == nil {
 		t.Fatal("authenticated browser host was not registered")
 	}
+	if _, err := gateway.gatewayRequest(context.Background(), gatewayMessage{Type: "manifest.get", WorldID: world.WorldID, TargetPeerID: ownerID.String()}); err == nil {
+		t.Fatal("gateway accepted a browser-host request without a request ID")
+	}
 	if err := guestConn.WriteJSON(gatewayMessage{Type: "manifest.get", WorldID: world.WorldID, RequestID: "manifest-1"}); err != nil {
 		t.Fatal(err)
 	}

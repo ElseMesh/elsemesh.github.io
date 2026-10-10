@@ -123,3 +123,13 @@ suspension, owner handover, and reconnect behavior. Repeat with a ThruHold porta
 and with gateway failure. Test direct WebRTC separately only after its signaling
 and relay paths exist. Public hosting claims require tests against a deployed
 HTTPS/WSS gateway from a network outside the developer machine.
+
+## Current implementation validation
+
+The gateway integration tests cover owner proof, replay rejection, provider
+lookup, signed manifest retrieval, declared asset range forwarding, chunk-size
+checks, and removal after disconnect. `go test ./...` and the Linux
+`thruholdd` build pass. The Android arm64 libzt build also ran on the Flip7:
+`--version` reported revision `2a89a63`, and two isolated `--print-node-id`
+starts reused the same identity. This did not join ZeroTier, exercise a public
+gateway, or verify Flip7 client rendering.

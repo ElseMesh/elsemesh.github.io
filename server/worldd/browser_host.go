@@ -209,14 +209,14 @@ func (s *browserHostSession) request(ctx context.Context, request gatewayMessage
 	if request.WorldID != s.world.WorldID {
 		return peerResponse{}, errors.New("world_not_hosted")
 	}
+	if request.RequestID == "" || len(request.RequestID) > 128 {
+		return peerResponse{}, errors.New("invalid_request_id")
+	}
 	if request.Type == "manifest.get" {
 		return peerResponse{Type: "manifest", WorldID: request.WorldID, RequestID: request.RequestID, Document: &s.document}, nil
 	}
 	if request.Type != "asset.get" {
 		return peerResponse{}, errors.New("unsupported_browser_host_request")
-	}
-	if request.RequestID == "" || len(request.RequestID) > 128 {
-		return peerResponse{}, errors.New("invalid_request_id")
 	}
 	var asset *assetRef
 	for i := range s.world.Assets {
