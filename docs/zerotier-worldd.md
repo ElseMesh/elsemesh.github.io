@@ -342,16 +342,41 @@ confirms that the adapter can establish a peer connection. The managed IPv4
 address was not queried through libzt; current `thruholdd` code only uses and
 announces the 6PLANE IPv6 address.
 
-During that attempt, `/var/log/fw.log` recorded outbound UDP/9993 drops on
-`OUT=spod` at 19:40:55 and 19:41:00, including packets to ZeroTier root
-`103.195.103.66`. The local nftables output chain intentionally drops general
-traffic on `spod`; this explains why this execution environment could not
-complete the peer test, and is not evidence that native ZeroTier One is needed
-or that the public network is misconfigured. No firewall exception was left in
-place. The remaining tests are:
+During that attempt, `/var/log/fw.log` recorded outbound UDP drops on
+`OUT=spod`, including packets to ZeroTier root `103.195.103.66`. The local
+nftables output chain intentionally drops traffic on `spod`. A later process
+inspection showed that libzt had opened sockets for `thruholdd` on several
+interfaces, including both `spod` and the active `wlo1`; the log entries
+therefore prove that the `spod`-bound attempts were dropped, but do not prove
+that this caused the peer dial to fail. No exception was added to `spod`.
 
-1. Repeat a real `thruholdd` peer dial on two ordinary hosts and verify
-   connection establishment plus sustained bidirectional traffic.
+### Latest clean two-device retry (2026-10-10)
+
+The Android arm64 daemon was rebuilt from source revision
+`bc0f06b22ea5b46568f73a922bf45352c3977c32` with NDK r29 and the existing
+libzt build whose CMake cache points directly to
+`/mnt/kingston/@home/rebroad/src/ZeroTierOne`. Its binary and `libzt.so` were
+copied to a disposable Termux directory; SHA-256 hashes matched the external
+build artifacts. The source `server` directory was synchronized into the
+external build tree with `cpto --no-lngit --nogit`; no build-to-source links
+were created.
+
+One Linux node and one Flip7 node each used fresh, separate world and libzt
+state directories. Both joined `e3918db4832a3056` and returned healthy local
+`/healthz` responses. The Linux node was `3af8192ed2` at
+`fc60:bbbd:e23a:f819:2ed2::1`; the phone was `fe616aa61f` at
+`fc60:bbbd:e2fe:616a:a61f::1`. The phone's bootstrap dial to the Linux
+6PLANE TCP address on port `42901` timed out, and both health responses showed
+`dhtPeers: 0`. This clean retry does not establish inter-device connectivity.
+The separate-NAT condition and the current Central flow rules also remain
+unverified, so this result does not identify the cause of the timeout. Both
+test daemons and their disposable files were removed after the run.
+
+The remaining tests are:
+
+1. Diagnose the failed clean Flip7-to-Linux TCP dial, then verify connection
+   establishment and sustained bidirectional traffic between two `thruholdd`
+   nodes.
 2. Repeat from separate NATs and record whether the path is direct or relayed.
 3. Add and test managed IPv4 support in libzt; current `thruholdd` uses 6PLANE
    IPv6 only.
