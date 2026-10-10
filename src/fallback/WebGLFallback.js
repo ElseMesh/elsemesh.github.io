@@ -5,7 +5,7 @@ import { DEFAULT_APPEARANCE } from '../player/AvatarAppearance.js';
 import { portalRouteFromPosition } from '../network/PortalHandoff.js';
 import villageUrl from '../../worlds/island/lod-source/village-low.glb?url';
 
-const PRESENCE_PROTOCOL = 'elsemesh.player-presence/1';
+const PRESENCE_PROTOCOL = 'elsemesh.player-presence/2';
 
 export class WebGLFallback {
 

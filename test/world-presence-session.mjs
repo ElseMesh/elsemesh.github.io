@@ -29,7 +29,8 @@ session.dispose(); assert.equal(closed,1); assert.equal(sent[2].signal.aborted,t
 pending.resolve({type:'presence',worldId:connector.worldId,requestId:'late',playerId:own,players:[pose]}); await session.pending;
 session.update(.016,player); assert.equal(created.length,1,'late source-world response cannot resurrect an avatar after handoff');
 session.dispose(); assert.equal(closed,1,'disposal is idempotent');
-const boatPose=makePresencePose({...player,mode:'boat',boat:{getYaw:()=>1},helmYaw:.2,helmPitch:.4},4,DEFAULT_APPEARANCE);
+const boatPose=makePresencePose({...player,mode:'boat',boat:{getYaw:()=>1,speed:7.5},helmYaw:.2,helmPitch:.4},4,DEFAULT_APPEARANCE);
 assert.ok(Math.abs(boatPose.yaw-Math.atan2(Math.sin(1+Math.PI+.2),Math.cos(1+Math.PI+.2)))<1e-9);
 assert.equal(boatPose.pitch,.4); assert.equal(boatPose.moving,false,'helm pose is distinct from walking');
+assert.equal(boatPose.vehicleSpeed,7.5,'vehicle presence includes the speed checked against destination rules');
 console.log('ok   active-world publisher cadence, owner routing, avatar departure and handoff cleanup');

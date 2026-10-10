@@ -5,6 +5,7 @@ import { RemoteAvatar } from '../player/RemoteAvatar.js';
 
 export function makePresencePose(player, sequence, appearance) {
  const boat = player.mode === 'boat' ? player.boat : null;
+ const vehicle = player.mode === 'boat' || player.mode === 'deck';
  const yaw = boat ? boat.getYaw() + Math.PI + (player.helmYaw || 0) : player.yaw;
  const velocity = player.mode === 'deck' ? player.deckVel : player.velocity;
  return {
@@ -14,6 +15,7 @@ export function makePresencePose(player, sequence, appearance) {
   pitch: boat ? player.helmPitch || 0 : player.pitch,
   moving: player.mode !== 'boat' && (velocity?.lengthSq() || 0) > 0.12,
   mode: player.mode, appearance: {...appearance},
+  ...(vehicle ? { vehicleSpeed: player.boat?.speed ?? 0 } : {}),
  };
 }
 

@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-const playerPresenceProtocol = "elsemesh.player-presence/1"
+const playerPresenceProtocol = "elsemesh.player-presence/2"
+const legacyPlayerPresenceProtocol = "elsemesh.player-presence/1"
 const maxPresencePlayers = 128
 const presenceTTL = 10 * time.Second
 const downeastBoatTriangles = 46845 // tidewater.downeast-boat/1 complexity contract
@@ -29,14 +30,15 @@ type avatarAppearance struct {
 	Hair     string `json:"hair"`
 }
 type playerPose struct {
-	Protocol   string           `json:"protocol"`
-	Sequence   uint64           `json:"sequence"`
-	Position   []float64        `json:"position"`
-	Yaw        float64          `json:"yaw"`
-	Pitch      float64          `json:"pitch"`
-	Moving     bool             `json:"moving"`
-	Mode       string           `json:"mode"`
-	Appearance avatarAppearance `json:"appearance"`
+	Protocol     string           `json:"protocol"`
+	Sequence     uint64           `json:"sequence"`
+	Position     []float64        `json:"position"`
+	Yaw          float64          `json:"yaw"`
+	Pitch        float64          `json:"pitch"`
+	Moving       bool             `json:"moving"`
+	Mode         string           `json:"mode"`
+	VehicleSpeed *float64         `json:"vehicleSpeed,omitempty"`
+	Appearance   avatarAppearance `json:"appearance"`
 }
 type playerPresence struct {
 	ID string `json:"id"`
@@ -57,7 +59,7 @@ func presenceKey(gatewayID, session string) string {
 	return "player:" + hex.EncodeToString(digest[:])
 }
 func validatePlayerPose(p *playerPose) error {
-	if p == nil || p.Protocol != playerPresenceProtocol || p.Sequence > 9007199254740991 || len(p.Position) != 3 {
+	if p == nil || (p.Protocol != playerPresenceProtocol && p.Protocol != legacyPlayerPresenceProtocol) || p.Sequence > 9007199254740991 || len(p.Position) != 3 {
 		return errors.New("invalid_presence_pose")
 	}
 	for _, v := range p.Position {
@@ -70,6 +72,16 @@ func validatePlayerPose(p *playerPose) error {
 	}
 	if p.Mode != "walk" && p.Mode != "swim" && p.Mode != "deck" && p.Mode != "boat" {
 		return errors.New("invalid_presence_mode")
+	}
+	if p.Mode == "boat" || p.Mode == "deck" {
+		if p.Protocol != playerPresenceProtocol {
+			return errors.New("vehicle_presence_protocol_upgrade_required")
+		}
+		if p.VehicleSpeed == nil || math.IsNaN(*p.VehicleSpeed) || math.IsInf(*p.VehicleSpeed, 0) || *p.VehicleSpeed < 0 || *p.VehicleSpeed > 100 {
+			return errors.New("invalid_vehicle_speed")
+		}
+	} else if p.Protocol == playerPresenceProtocol && p.VehicleSpeed != nil {
+		return errors.New("unexpected_vehicle_speed")
 	}
 	if p.Appearance.Style != "male" && p.Appearance.Style != "female" {
 		return errors.New("invalid_avatar_style")
@@ -92,6 +104,9 @@ func (d *daemon) validateVehiclePresence(p *playerPose) error {
 	}
 	if policy.MaxSpeed == nil || policy.MaxCombinedComplexity == nil {
 		return errors.New("vehicle_policy_invalid")
+	}
+	if *p.VehicleSpeed > *policy.MaxSpeed+0.01 {
+		return errors.New("vehicle_speed_exceeded")
 	}
 	hasBoat := false
 	for _, component := range d.world.Components {

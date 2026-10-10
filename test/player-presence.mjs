@@ -26,6 +26,8 @@ assert.equal(state.players.size, 0, 'Own session is excluded');
 for (const appearance of [{ ...DEFAULT_APPEARANCE, style: 'url' }, { ...DEFAULT_APPEARANCE, shirt: '#ABCDEF' }, { ...DEFAULT_APPEARANCE, model: '/evil.glb' }]) assert.throws(() => validatePresencePose({ ...pose(1), appearance }));
 assert.throws(() => validatePresencePose({ ...pose(1), position: [Infinity, 0, 0] }));
 assert.throws(() => validatePresencePose({ ...pose(1), pitch: 2 }));
+assert.throws(() => validatePresencePose({ ...pose(1), mode: 'boat' }), /Invalid presence vehicle speed/, 'vehicle presence requires a reported speed in protocol v2');
+assert.doesNotThrow(() => validatePresencePose({ ...pose(1), protocol: 'elsemesh.player-presence/1' }), 'legacy walking presence remains readable');
 let key, value;
 const storage = { setItem(k, v) { key = k; value = v; }, getItem() { return value; } };
 assert.equal(saveAppearance(DEFAULT_APPEARANCE, storage), true);

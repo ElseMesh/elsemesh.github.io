@@ -31,6 +31,15 @@ func presenceTestPose() *playerPose {
 func TestPresenceLimitsExpiryAndIdentity(t *testing.T) {
 	d := presenceTestDaemon(t)
 	now := time.Now()
+	legacyWalk := presenceTestPose()
+	legacyWalk.Protocol = legacyPlayerPresenceProtocol
+	if err := validatePlayerPose(legacyWalk); err != nil {
+		t.Fatalf("legacy walking pose should remain supported: %v", err)
+	}
+	legacyWalk.Mode = "boat"
+	if err := validatePlayerPose(legacyWalk); err == nil || err.Error() != "vehicle_presence_protocol_upgrade_required" {
+		t.Fatalf("legacy vehicle pose should require the speed-capable protocol: %v", err)
+	}
 	request := gatewayMessage{Type: "presence.update", WorldID: d.world.WorldID, Pose: presenceTestPose()}
 	if _, err := d.localRequest(request); err == nil {
 		t.Fatal("unbound request accepted")
@@ -89,6 +98,10 @@ func TestPresenceEnforcesSignedVehicleAdmissionPolicy(t *testing.T) {
 	update := func(mode string, sequence uint64) error {
 		pose := presenceTestPose()
 		pose.Mode = mode
+		if mode == "boat" || mode == "deck" {
+			speed := 0.0
+			pose.VehicleSpeed = &speed
+		}
 		pose.Sequence = sequence
 		request := gatewayMessage{Type: "presence.update", WorldID: d.world.WorldID, Pose: pose}
 		session, err := newPresenceSession()
@@ -116,6 +129,24 @@ func TestPresenceEnforcesSignedVehicleAdmissionPolicy(t *testing.T) {
 	maxComplexity = 66845
 	if err := update("boat", 4); err != nil {
 		t.Fatalf("vehicle at signed complexity budget should be admitted: %v", err)
+	}
+	tooFast := presenceTestPose()
+	tooFast.Mode = "boat"
+	tooFast.VehicleSpeed = new(float64)
+	*tooFast.VehicleSpeed = maxSpeed + 0.02
+	tooFast.Sequence = 5
+	request := gatewayMessage{Type: "presence.update", WorldID: d.world.WorldID, Pose: tooFast}
+	session, err := newPresenceSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindPresenceRequest(&request, d.host.ID().String(), session)
+	if _, err := d.presenceRequest(request, now.Add(5*time.Second)); err == nil || err.Error() != "vehicle_speed_exceeded" {
+		t.Fatalf("vehicle above signed speed cap should be rejected, got %v", err)
+	}
+	tooFast.VehicleSpeed = nil
+	if err := validatePlayerPose(tooFast); err == nil || err.Error() != "invalid_vehicle_speed" {
+		t.Fatalf("vehicle pose without reported speed should be rejected, got %v", err)
 	}
 }
 
