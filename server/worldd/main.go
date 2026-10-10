@@ -131,6 +131,7 @@ func run() error {
 	directoryURL := flag.String("directory-url", "", "optional HTTPS ElseMesh directory service URL for publishing this discoverable node")
 	var allowedBrowserOriginsFlags stringFlags
 	var webrtcSTUNServers stringFlags
+	var zeroTierBlacklistInterfaces stringFlags
 	webrtcUDPPortMin := flag.Uint("webrtc-udp-port-min", 42950, "first local UDP port available to WebRTC ICE")
 	webrtcUDPPortMax := flag.Uint("webrtc-udp-port-max", 43049, "last local UDP port available to WebRTC ICE")
 	dhtMode := flag.String("dht-mode", "auto", "DHT mode: auto, client, or server")
@@ -147,6 +148,7 @@ func run() error {
 	flag.Var(&announceAddresses, "announce-address", "externally reachable IP multiaddr to advertise (repeatable; useful when Android blocks interface discovery)")
 	flag.Var(&allowedBrowserOriginsFlags, "allow-browser-origin", "allow this exact HTTP(S) browser origin to connect to the WebSocket gateway (repeatable)")
 	flag.Var(&webrtcSTUNServers, "webrtc-stun-server", "STUN server URL advertised to browsers and used by worldd for direct WebRTC (repeatable)")
+	flag.Var(&zeroTierBlacklistInterfaces, "zerotier-blacklist-interface", "interface name prefix that libzt must not use for physical paths (repeatable)")
 	cacheSyncInterval := flag.Duration("cache-sync-interval", 5*time.Minute, "how often to retry missing owner-authorized cached assets")
 	roleStateSyncInterval := flag.Duration("role-state-sync-interval", time.Minute, "how often to sync owner-signed role revocations")
 	flag.Parse()
@@ -422,7 +424,7 @@ func run() error {
 		if err := migrateLegacyZeroTierStorage(filepath.Join(configDir, "tidewater", "worldd", "zerotier"), *zeroTierDataDir); err != nil {
 			return fmt.Errorf("migrate existing ZeroTier identity: %w", err)
 		}
-		zeroTier, err = startZeroTier(*zeroTierNetwork, *zeroTierDataDir)
+		zeroTier, err = startZeroTier(*zeroTierNetwork, *zeroTierDataDir, zeroTierBlacklistInterfaces)
 		if err != nil {
 			return fmt.Errorf("start ZeroTier: %w", err)
 		}
@@ -433,6 +435,8 @@ func run() error {
 		}
 		parsedAnnounceAddresses = append(parsedAnnounceAddresses, ztAddresses...)
 		log.Printf("ZeroTier node %s joined %s at %v", zeroTier.NodeID(), *zeroTierNetwork, addresses)
+	} else if len(zeroTierBlacklistInterfaces) > 0 {
+		return errors.New("--zerotier-blacklist-interface requires ZeroTier support")
 	}
 
 	listen := libp2pListenAddresses(*listenPort, parsedAnnounceAddresses)

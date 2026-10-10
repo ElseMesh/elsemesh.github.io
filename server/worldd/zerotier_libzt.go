@@ -33,6 +33,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -67,13 +68,18 @@ type libztRuntime struct {
 	proxyWG      sync.WaitGroup
 }
 
-func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
+func startZeroTier(networkID, storagePath string, blacklistInterfaces []string) (zeroTierRuntime, error) {
 	if len(networkID) != 16 {
 		return nil, errors.New("network ID must contain exactly 16 hexadecimal digits")
 	}
 	netID, err := strconv.ParseUint(networkID, 16, 64)
 	if err != nil || netID == 0 {
 		return nil, errors.New("network ID must be a nonzero 16-digit hexadecimal value")
+	}
+	for _, prefix := range blacklistInterfaces {
+		if len(prefix) == 0 || len(prefix) > 15 || strings.IndexByte(prefix, 0) >= 0 {
+			return nil, fmt.Errorf("ZeroTier interface blacklist prefix must be 1-15 bytes without NUL: %q", prefix)
+		}
 	}
 	if err := prepareZeroTierIdentityStorage(storagePath); err != nil {
 		return nil, err
@@ -82,6 +88,14 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 	defer C.free(unsafe.Pointer(path))
 	if code := int(C.zts_init_from_storage(path)); code != 0 {
 		return nil, fmt.Errorf("libzt state initialization failed (%d)", code)
+	}
+	for _, prefix := range blacklistInterfaces {
+		cPrefix := C.CString(prefix)
+		code := int(C.zts_init_blacklist_if(cPrefix, C.uint(len(prefix))))
+		C.free(unsafe.Pointer(cPrefix))
+		if code != 0 {
+			return nil, fmt.Errorf("libzt could not blacklist interface prefix %q (%d)", prefix, code)
+		}
 	}
 	if code := int(C.zts_node_start()); code != 0 {
 		return nil, fmt.Errorf("libzt node start failed (%d)", code)

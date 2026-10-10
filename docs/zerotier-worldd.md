@@ -23,9 +23,10 @@ selected the ordinary `wlo1` default gateway (`192.168.20.1`), confirming that
 this userspace libzt address is not installed as a host OS route. The current
 implementation advertises and listens on both assigned managed IPv4 and
 6PLANE IPv6 addresses, and routes in-prefix IPv4 libp2p TCP dials through
-libzt. Live IPv4 peer connectivity remains unverified. The locally
-stored Legacy API token still returns HTTP 403; that blocks API reads but does
-not prevent checking the settings in Central's web UI.
+libzt. Same-host and Linux–Flip7 live managed-IPv4 peers are verified below;
+independent-NAT reachability remains unverified. The locally stored Legacy API
+token still returns HTTP 403; that blocks API reads but does not prevent
+checking the settings in Central's web UI.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
 to the controller through ([API schema](https://docs.rs/zerotier-central-api/latest/zerotier_central_api/types/struct.Member.html)); it is not a list of all peer paths or a hole-punching guarantee. A blank Central field means no such address is currently recorded for that member. A successful local join and 6PLANE assignment do not by themselves prove that Central's member record has a physical address.
 
@@ -228,6 +229,19 @@ go through libzt; inbound connections are bridged to the ordinary libp2p TCP
 listener. Other TCP addresses and QUIC/WebSocket/WebTransport/WebRTC keep their
 normal paths. The address is a transport locator only; signed identity and
 world authorization remain authoritative.
+
+On Linux hosts with an unusable or policy-blocked physical interface, exclude
+that interface from libzt's physical path discovery with a repeatable option:
+
+```sh
+thruholdd --zerotier-blacklist-interface spod
+```
+
+The argument is an interface-name prefix (maximum 15 bytes) and calls libzt's
+`zts_init_blacklist_if()` before node start. It changes only this libzt node's
+interface selection; it does not alter host routes or firewall policy. Omit it
+on hosts that do not need an exclusion. The Linux–Flip7 verification below
+used it on the Linux node to exclude `spod`.
 
 This path requires a libzt build for each target architecture and its native
 dependencies. For Android arm64, build `libzt.so` with the Android NDK for
@@ -518,18 +532,15 @@ connection was available, but it did not change this network result.
 
 The remaining tests are:
 
-1. Restore Flip7 connectivity to the host, diagnose the post-policy TCP dial,
-   then verify the managed IPv4 path on the phone. The same-host Linux peer
-   session is now verified.
-2. Repeat from separate NATs and record whether the path is direct or relayed.
-3. Inspect firewall logs/rules and verify the phone's managed IPv4 peer path.
-4. Verify the saved Central flow policy continues to allow the configured
+1. Repeat the live peer check across independently routed/NATed networks and
+   record whether the path is direct or relayed.
+2. Verify the saved Central flow policy continues to allow the configured
    daemon ports and replies when those ports change.
-5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
+3. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
    the browser.
-6. Confirm operation while the Central API is unavailable.
-7. Check the game renderer and visual quality on the Flip7; the completed
-   Android test above exercised only the headless daemon.
+4. Confirm operation while the Central API is unavailable.
+5. Check the game renderer and visual quality on the Flip7; the completed
+   Android network check exercised only the headless daemon.
 
 ### Listener shutdown check (2026-10-10)
 
@@ -545,18 +556,15 @@ The implementation makes listener sockets nonblocking, cancels and joins
 accept loops before teardown, closes the libp2p host before closing libzt
 listeners, and waits for accepted bridge proxies before calling
 `zts_node_free()`. Focused Linux tests and Linux/Android arm64 builds passed.
-The Linux active-peer result is recorded below; the earlier Android idle test
-does not verify Android shutdown with an active peer.
+The later Linux and Android active-peer results are recorded below; earlier
+idle-only shutdown checks did not verify active-peer shutdown.
 
-The last isolated Android runtime attempt used the revised binary and a
+The earlier isolated Android runtime attempt used the revised binary and a
 previously successful test identity, but its bootstrap dial timed out and
 `dhtPeers` stayed at zero, so it did not exercise shutdown with an active peer.
 The subsequent 6PLANE attempt could not be recovered after its observation
-handle disappeared. A read-only search of `/var/log/fw.log` for the recorded
-test node addresses and port found no matching entries; this neither proves
-the test traffic was delivered nor identifies a firewall cause. Android
-active-peer shutdown remains unverified until a peer-connected Flip7 process
-exits cleanly and the persistent daemon processes are confirmed untouched.
+handle disappeared. These historical attempts do not establish the current
+Android shutdown result; the verified active-peer test is recorded below.
 
 ### Linux active-peer shutdown verification (2026-10-11)
 
@@ -587,10 +595,10 @@ exited cleanly, but the managed-IPv4 run is the stronger libzt-path check.
 
 This result does not presently justify modifying libzt itself. Revisit a
 library change only if broader tests expose a libzt defect the adapter cannot
-correctly handle. Focused ZeroTier tests and Linux amd64/Android arm64 builds
-pass, but active-peer shutdown on Android is still unverified. Cross-host
-overlay transport, NAT traversal, and Android runtime behavior remain separate
-validation gates.
+correctly handle. The Linux and Android active-peer shutdown results below
+confirm the application adapter handles the tested connection lifecycle.
+Cross-NAT traversal, relay fallback, and full world-content exchange remain
+separate validation gates.
 
 ### Flip7 active-peer retry and host firewall evidence (2026-10-11)
 
@@ -599,9 +607,37 @@ inspected but left untouched. The matching Android test binary and `libzt.so`
 were copied with resumable `rsync` into a new private `$PREFIX/tmp` directory;
 their SHA-256 values matched the external build artifacts. Before starting a
 new phone process, the disposable Linux peer timed out waiting for network
-configuration. `/var/log/fw.log` recorded its outbound ZeroTier root packets
-to UDP port `9993` as `SDROP` on interface `spod`. This attempt therefore did
-not reach the peer test or exercise Android shutdown. No firewall rules were
-changed. The existing `spod` drop policy remains intentional; route selection
-for this daemon test must be resolved separately before retrying Android
-active-peer shutdown.
+configuration. During the same minute, `/var/log/fw.log` recorded UDP/9993
+packets from the host's `spod` address to a ZeroTier root as `SDROP`. The log
+does not identify the originating process, and this does not prove those drops
+caused the libzt timeout. An unmarked route query for that root selected
+`wlo1`; the traceable relationship between libzt's physical sockets and the
+`spod` drops remains to be established. This attempt therefore did not reach
+the peer test or exercise Android shutdown. No firewall rules were changed,
+and the existing `spod` drop policy remains intact.
+
+### Linux–Flip7 managed-IPv4 peer and shutdown verification (2026-10-11)
+
+The Linux test daemon was kept alive in a tracked terminal session. It used a
+fresh test identity, network `e3918db4832a3056`, managed IPv4
+`172.22.26.45/16`, and `--zerotier-blacklist-interface spod`; `/healthz`
+reported `status: ok`. Its p2p listener used the Central-allowed TCP port
+`42901`. The Flip7 test used a different temporary identity, joined the same
+network at `172.22.216.247/16`, and bootstrapped to that Linux address. The
+phone `/healthz` reported `dhtPeers: 1`, confirming a live cross-device
+managed-IPv4 peer. SIGTERM then stopped the Android daemon with exit status 0;
+the Linux test daemon was also stopped cleanly. The matching Android binary
+and `libzt.so` hashes were checked against the build artifacts before
+deployment, and the user's other Termux daemons and persistent identities were
+left untouched.
+
+An unfiltered fresh Linux test identity immediately before this run timed out
+waiting for network configuration after 60 seconds. With `spod` excluded, a
+fresh Linux identity joined and became healthy in about 13 seconds. This
+controlled result supports the interface option as a useful host-specific
+setting, but does not prove that the unfiltered timeout was caused by the
+logged `spod` drops.
+
+The test establishes a live peer between separate devices, but not separate
+NATs: both may have shared the same network egress. It also does not yet verify
+portal handoff, content transfer, sustained peer stability, or relay fallback.
