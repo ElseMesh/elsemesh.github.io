@@ -264,11 +264,12 @@ log tail. This isolates that failed attempt to the restricted shell's `spod`
 policy; it is not a deployment firewall rule and must not be copied into the
 host ruleset.
 
-The Flip7's USB ADB transport is currently available, but the device was
-locked during the renderer check. Android kept the browser in the background
-and both panel captures were black, so this run did not verify rendering or
-visual quality. The temporary daemon was stopped; the persistent phone
-ZeroTier identity was not touched.
+Host `adb devices -l` lists no attached phone, but the Termux ADB client can
+connect to the phone's local debug endpoint at `127.0.0.1:5555`. At the latest
+screen check Android reported `mWakefulness=Dozing`; the capture was black, so
+it did not verify rendering or visual quality. The renderer check still needs
+an awake, unlocked phone. The temporary daemon was stopped; the persistent
+phone ZeroTier identity was not touched.
 
 After the fork-compatibility changes, a clean 128-step `zt-shared` rebuild
 passed, and `thruholdd` was rebuilt against that artifact. `llvm-readelf`
@@ -276,6 +277,17 @@ confirmed both outputs are Android AArch64/API 26 binaries; `thruholdd`
 depends on `libzt.so` plus Android system libraries. The independent fork
 snapshot remained a real directory in the external build tree, with no link
 back into either source repository.
+
+The rebuilt binaries were then copied to a disposable Termux directory on the
+Flip7. Their SHA-256 hashes matched the external build artifacts, and
+`thruholdd --version` printed `d8f2eb2017c7892a6b094fe1cab06250f622a0a8`. A
+fresh temporary libzt identity (`fb164545f7`) joined network
+`e3918db4832a3056` at `fc60:bbbd:e2fb:1645:45f7::1`; `/healthz` returned
+`status: ok` with `dhtPeers: 0`. Android still denied libp2p's interface
+enumeration (`netlinkrib: permission denied`), while the ZeroTier join and
+loopback health endpoint succeeded. The process was stopped and its temporary
+identity and files were removed. This validates the new binary on-device, not
+peer connectivity, portal transfer, or renderer appearance.
 
 ## Remaining validation
 

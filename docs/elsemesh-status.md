@@ -52,13 +52,15 @@ The Android arm64 `libzt.so` and `thruholdd` build ran on the SM-F766B. A
 separate Linux daemon also joined the dedicated LAN; the Flip7 briefly reported
 one DHT peer, then zero. Both devices had the same observed public IPv4 egress,
 so this is only transient inter-device evidence, not a sustained or
-separate-NAT test. Afterward, a clean Android arm64 libzt rebuild against the
-ZeroTierOne `exp3` fork and a linked `thruholdd` cross-build both passed; the
-external build tree uses an independent fork snapshot, with no source-tree
-symlink. The Legacy Central read-only API still returns HTTP 403
-using the owner-only mode-0600 token file. USB ADB is available, but the phone
-was locked during the current renderer attempt and both display captures were
-black. See [ZeroTier networking](zerotier-worldd.md) for addresses and the
+separate-NAT test. A clean Android arm64 libzt rebuild against the ZeroTierOne
+`exp3` fork and a linked `thruholdd` cross-build passed. The rebuilt daemon was
+then run on the Flip7 with isolated state: it joined the dedicated LAN and
+returned healthy with zero DHT peers. The external build tree uses an
+independent fork snapshot, with no source-tree symlink. The Legacy Central
+read-only API still returns HTTP 403 using the owner-only mode-0600 token
+file. Host ADB lists no phone, but on-device ADB connects to localhost; the
+phone is dozing and the latest capture is black, so visual verification remains
+open. See [ZeroTier networking](zerotier-worldd.md) for addresses and the
 remaining gates.
 
 ## Remaining implementation gates
