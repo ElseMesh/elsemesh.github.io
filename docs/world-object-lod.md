@@ -118,3 +118,8 @@ independent camera selection, unchanged collision, asynchronous race handling an
 Blender validation. It does
 not establish GPU-submitted counts or near/far image fidelity. Contract tests
 exercise invalid declarations and CLI hash import; Go tests cover signed validation.
+To compile and render the packaged-object fade shaders through headless WebGPU,
+run `ELSEMESH_WORLD_OBJECT_LOD_RENDER=1 node test/world-object-lod.mjs` from the
+external build tree after copying source into it. This checks masked material
+pipelines for both visible levels in color and shadow passes; it does not replace
+matched-view or Flip7 visual checks.

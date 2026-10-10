@@ -6,6 +6,12 @@ import { PerspectiveCamera } from '../src/engine/scene/Camera.js';
 import { LODLoadQueue, WorldObjectLOD, selectObjectLOD } from '../src/network/WorldObjectLOD.js';
 import { loadWorldPackage, updateWorldPackageLOD, disposeWorldPackage, registerWorldPackageCollisions } from '../src/network/WorldPackage.js';
 import { Colliders } from '../src/world/Colliders.js';
+import { GPU } from '../src/engine/gpu/GPU.js';
+import { RenderTarget } from '../src/engine/gpu/Texture.js';
+import { G, setFrameCamera } from '../src/engine/render/Frame.js';
+import { MeshRenderer } from '../src/engine/render/MeshRenderer.js';
+import { SunShadows } from '../src/engine/render/Shadows.js';
+import { Scene } from '../src/engine/scene/Scene.js';
 
 const camera = new PerspectiveCamera(60,1,.1,1000);
 const object = {id:'tw-object:lod', kind:'asset-instance', label:'LOD fixture', assetId:'full', transform:{position:[0,0,-10],yaw:0},scale:[1,1,1], streamingBounds:{center:[0,0,0],radius:1}, collision:{enabled:true,shape:'box',center:[0,0,0],halfExtents:[1,1,1],walkable:true,solid:true},lods:[{assetId:'medium',maxScreenFraction:.12},{assetId:'low',maxScreenFraction:.04}]};
@@ -42,7 +48,7 @@ reversible.dispose();
 function meshGLB(triangles) {
  const positions = new Float32Array(triangles * 9);
  for(let t=0;t<triangles;t++) positions.set([0,0,0,1,0,0,0,1,0],t*9);
- const json = {asset:{version:'2.0'},buffers:[{byteLength:positions.byteLength}],bufferViews:[{buffer:0,byteOffset:0,byteLength:positions.byteLength}],accessors:[{bufferView:0,componentType:5126,count:positions.length/3,type:'VEC3'}],materials:[{pbrMetallicRoughness:{baseColorFactor:[.2,.4,.6,1]}}],meshes:[{primitives:[{attributes:{POSITION:0},material:0,mode:4}]}],nodes:[{mesh:0}],scenes:[{nodes:[0]}],scene:0};
+ const json = {asset:{version:'2.0'},buffers:[{byteLength:positions.byteLength}],bufferViews:[{buffer:0,byteOffset:0,byteLength:positions.byteLength}],accessors:[{bufferView:0,componentType:5126,count:positions.length/3,type:'VEC3'}],materials:[{alphaMode:'MASK',alphaCutoff:.5,pbrMetallicRoughness:{baseColorFactor:[.2,.4,.6,1]}}],meshes:[{primitives:[{attributes:{POSITION:0},material:0,mode:4}]}],nodes:[{mesh:0}],scenes:[{nodes:[0]}],scene:0};
  const encoded = new TextEncoder().encode(JSON.stringify(json)); const padded = Math.ceil(encoded.length/4)*4;
  const buffer = new ArrayBuffer(12+8+padded+8+positions.byteLength); const view = new DataView(buffer);
  view.setUint32(0,0x46546c67,true);view.setUint32(4,2,true);view.setUint32(8,buffer.byteLength,true);
@@ -103,6 +109,33 @@ now+=200;adaptive.update(portalCamera,now,2);assert.equal(visibleTriangles(),2,'
 camera.position.z=-7;adaptive.update(camera,now,2);
 assert.equal(visibleTriangles(),10,'Large near view starts restoring full detail under maximum load');
 now+=200;adaptive.update(camera,now,2);assert.equal(visibleTriangles(),8,'Large near view retains full detail under maximum load');
+if(process.env.ELSEMESH_WORLD_OBJECT_LOD_RENDER==='1') {
+ await import('./headless.mjs');
+ await GPU.init({headless:true});
+ const scene=new Scene();scene.add(root);
+ root.traverse(node=>{if(node.isMesh)node.castShadow=true;});
+ const renderCamera=new PerspectiveCamera(55,1,.1,1000);renderCamera.position.set(0,1,60);renderCamera.lookAt(0,0,-10);
+ const renderLOD=root.userData.worldPackage.lodControllers.get(object.id);
+ renderLOD.update(renderCamera,now+100,0);
+ renderLOD.update(renderCamera,now+200,0);
+ assert.ok(renderLOD.transition,'GPU smoke renders both variants during their transition');
+ assert.equal(visibleTriangles(),10,'GPU smoke keeps complementary base and low variants visible together');
+ G.sunDir.value.set(.5,.7,.3).normalize();G.sunColor.value.setRGB(3,2.9,2.7);G.skyIrradiance.value.setRGB(.25,.32,.45);
+ const width=128,height=128;
+ const target=new RenderTarget(width,height,{colors:['rgba16float','rgba16float','rgba8unorm'],depth:'depth32float',label:'object-lod-smoke'});
+ const renderer=new MeshRenderer(),shadows=new SunShadows();
+ GPU.device.pushErrorScope('validation');
+ GPU.beginFrame();setFrameCamera(renderCamera,width,height);
+ shadows.render(scene,renderer,shadows.update(renderCamera,G.sunDir.value));
+ renderer.render(scene,{camera:renderCamera,kind:'main',colorViews:target.textures.map(texture=>texture.view()),colorFormats:target.formats,
+  clearColors:[[.1,.15,.2,1],[0,0,0,0],[0,0,0,0]],depthView:target.depthTexture.view(),depthFormat:'depth32float',clearDepth:0});
+ GPU.submit();await GPU.device.queue.onSubmittedWorkDone();
+ const validationError=await GPU.device.popErrorScope();
+ assert.equal(validationError,null,validationError?.message);
+ assert.ok(renderer.stats.pipelines>=4,'World-object fade shaders compile for both visible levels and their color/shadow passes');
+ console.log(`World-object LOD GPU smoke: ${renderer.stats.pipelines} pipelines, complementary masked GLB levels rendered`);
+ await new Promise(resolve=>setTimeout(resolve,100));
+}
 disposeWorldPackage(root);disposeWorldPackage(root);
 assert.ok(root.userData.worldPackage.lodControllers.get(object.id).controller.signal.aborted);
 console.log('Object LOD: projected selection, hysteresis, async races, real GLB triangle reductions, collision and per-camera restoration passed');
