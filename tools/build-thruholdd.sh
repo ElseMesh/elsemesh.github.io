@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+DEFAULT_LIBZT_BUILD_ROOT=
 case "$ROOT" in
 	/mnt/kingston/@home/*)
 		SOURCE_ROOT=$ROOT
@@ -9,6 +10,7 @@ case "$ROOT" in
 		parent=${relative%/*}
 		name=${relative##*/}
 		DEFAULT_BUILD_ROOT="/mnt/kingston/builds/$parent/$name.build/independent"
+		DEFAULT_LIBZT_BUILD_ROOT="/mnt/kingston/builds/$parent/libzt.build"
 		;;
 	/mnt/kingston/builds/*/*.build)
 		DEFAULT_BUILD_ROOT=$ROOT
@@ -42,15 +44,23 @@ case "$BUILD_REAL/" in
 		exit 2
 		;;
 esac
-LIBZT_INCLUDE_DIR=${LIBZT_INCLUDE_DIR:-}
-LIBZT_LIB_DIR=${LIBZT_LIB_DIR:-}
 GOOS=${GOOS:-$(go env GOOS)}
 GOARCH=${GOARCH:-$(go env GOARCH)}
+LIBZT_SOURCE_ROOT=${LIBZT_SOURCE_ROOT:-"$(dirname "$SOURCE_ROOT")/libzt"}
+LIBZT_BUILD_ROOT=${LIBZT_BUILD_ROOT:-$DEFAULT_LIBZT_BUILD_ROOT}
+LIBZT_INCLUDE_DIR=${LIBZT_INCLUDE_DIR:-"$LIBZT_SOURCE_ROOT/include"}
+case "$GOOS/$GOARCH" in
+	linux/amd64) DEFAULT_LIBZT_LIB_DIR="$LIBZT_BUILD_ROOT/linux-amd64/lib" ;;
+	linux/arm64) DEFAULT_LIBZT_LIB_DIR="$LIBZT_BUILD_ROOT/linux-arm64/lib" ;;
+	android/arm64) DEFAULT_LIBZT_LIB_DIR="$LIBZT_BUILD_ROOT/android-arm64/lib" ;;
+	*) DEFAULT_LIBZT_LIB_DIR= ;;
+esac
+LIBZT_LIB_DIR=${LIBZT_LIB_DIR:-$DEFAULT_LIBZT_LIB_DIR}
 BUILD_REVISION=${BUILD_REVISION:-$(git -C "$SOURCE_ROOT" rev-parse --verify HEAD)}
 LIBZT_CXX_LIB=${LIBZT_CXX_LIB:-}
 
 if [[ -z "$LIBZT_INCLUDE_DIR" || -z "$LIBZT_LIB_DIR" ]]; then
-	printf 'Set LIBZT_INCLUDE_DIR and LIBZT_LIB_DIR to a built libzt installation.\n' >&2
+	printf 'No default libzt build path for %s/%s; set LIBZT_INCLUDE_DIR and LIBZT_LIB_DIR.\n' "$GOOS" "$GOARCH" >&2
 	exit 2
 fi
 if [[ ! -f "$LIBZT_INCLUDE_DIR/ZeroTierSockets.h" || ! -f "$LIBZT_LIB_DIR/libzt.so" ]]; then
@@ -70,7 +80,7 @@ case "$OUT_REAL/" in
 		exit 2
 		;;
 esac
-LDFLAGS="-s -w -X main.buildRevision=$BUILD_REVISION"
+LDFLAGS="-s -w -X main.buildRevision=$BUILD_REVISION -extldflags=-Wl,-rpath,\$ORIGIN"
 if [[ -z "$LIBZT_CXX_LIB" && "$GOOS" != android ]]; then
 	LIBZT_CXX_LIB=-lstdc++
 fi
@@ -88,4 +98,5 @@ mkdir -p "$OUT"
 		-ldflags="$LDFLAGS" \
 		-o "$OUT/thruholdd" ./worldd
 )
-printf 'Built %s/thruholdd with default ZeroTier network e3918db4832a3056.\n' "$OUT"
+cp -p "$LIBZT_LIB_DIR/libzt.so" "$OUT/libzt.so"
+printf 'Built %s/thruholdd and bundled libzt.so (default ZeroTier network e3918db4832a3056).\n' "$OUT"

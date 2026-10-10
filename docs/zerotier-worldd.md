@@ -85,7 +85,7 @@ QUIC carries UDP. If using the default, announce the assigned 6PLANE address
 when starting it so peers can dial the overlay address:
 
 ```sh
-worldd --announce-address /ip6/<this-host-6plane-address>/tcp/42901 \
+thruholdd --announce-address /ip6/<this-host-6plane-address>/tcp/42901 \
   --announce-address /ip6/<this-host-6plane-address>/udp/42901/quic-v1
 ```
 
@@ -143,16 +143,17 @@ installing the separate ZeroTier One service or passing `--zerotier-network`.
 Keep the source checkout and build tree separate. On this Linux development
 machine, sync by copying the source into the independent subdirectory of the
 mirrored `.build` tree; do not use a Git-linked build worktree or symlink the
-build tree to source. Build libzt for the target platform first, then use the
-helper with its headers and shared library. When run from the source checkout,
-the helper selects the external `independent` build copy automatically;
-`THRUHOLDD_BUILD_SERVER` can override the server build directory explicitly.
+build tree to source. Build libzt for the target platform first. With the
+standard sibling layout, the helper discovers `../libzt/include` and the
+matching library under the sibling `libzt.build`; set `LIBZT_SOURCE_ROOT`,
+`LIBZT_BUILD_ROOT`, or the specific include/library variables only for a
+nonstandard installation. When run from the source checkout, the helper selects
+the external `independent` build copy automatically; `THRUHOLDD_BUILD_SERVER`
+can override the server build directory explicitly.
 
 ```sh
 mkdir -p /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
 cpto --no-lngit --nogit "$HOME/src/elsemesh" /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
-LIBZT_INCLUDE_DIR=/path/to/libzt/include \
-LIBZT_LIB_DIR=/path/to/libzt/lib \
 BUILD_REVISION="$(git -C "$HOME/src/elsemesh" rev-parse HEAD)" \
 "$HOME/src/elsemesh/tools/build-thruholdd.sh"
 ```
@@ -161,9 +162,9 @@ This builds from the selected external source mirror and creates `thruholdd`
 under its `bin/` directory. The helper embeds the source checkout's current
 commit; set `BUILD_REVISION` explicitly when building from a source snapshot
 without Git metadata. It refuses server or output directories that resolve
-inside the source checkout. At runtime,
-make `libzt.so` available to
-the dynamic linker (for example with `LD_LIBRARY_PATH`). The default network
+inside the source checkout. It places the matching `libzt.so` beside the binary
+and embeds an `$ORIGIN` runtime search path, so the binary starts without a
+separate `LD_LIBRARY_PATH` when both files remain together. The default network
 is compiled into the ZeroTier-enabled build, so neither the network ID nor a
 special transport flag is needed. Non-libzt `worldd` builds remain available
 for development and targets without a supported libzt toolchain.
@@ -238,9 +239,8 @@ only on Android system libraries. Build `thruholdd` against that library and
 the matching NDK compiler with:
 
 ```sh
-LIBZT_INCLUDE_DIR=/path/to/libzt/include \
-LIBZT_LIB_DIR=/path/to/android-arm64/lib \
 THRUHOLDD_BUILD_SERVER=/path/to/prepared/external/server-build \
+THRUHOLDD_OUT=/path/to/prepared/external/server-build/bin/android-arm64 \
 GOOS=android GOARCH=arm64 \
 CC=/path/to/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang \
 CXX=/path/to/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++ \
@@ -249,8 +249,8 @@ tools/build-thruholdd.sh
 
 The build helper omits the Linux `libstdc++` linker flag on Android and applies
 the Go linker compatibility option needed by the Android network-interface
-dependency. Keep `libzt.so` beside the resulting `thruholdd` binary when
-running it.
+dependency. The helper automatically bundles the matching Android `libzt.so`
+beside `thruholdd`; keep both files together when installing it.
 
 On the Flip7, two temporary `thruholdd` processes with separate libzt state
 directories joined network `e3918db4832a3056`. They received distinct 6PLANE
@@ -282,6 +282,16 @@ screen check Android reported `mWakefulness=Dozing`; the capture was black, so
 it did not verify rendering or visual quality. The renderer check still needs
 an awake, unlocked phone. The temporary daemon was stopped; the persistent
 phone ZeroTier identity was not touched.
+
+On 2026-10-10, `tools/build-thruholdd.sh` was run with no `LIBZT_*` overrides.
+It discovered the sibling libzt source and external build, produced the Linux
+binary and colocated `libzt.so`, and `ldd` resolved that library through the
+binary's `$ORIGIN` path with no `LD_LIBRARY_PATH`. A separate Android arm64
+cross-build did the same using the NDK. The installed pair ran on the Flip7
+with `LD_LIBRARY_PATH` unset; a temporary daemon joined the default network
+and reported its 6PLANE address. This verifies default build discovery,
+runtime library loading, and Android network join; it does not establish a
+second-device or separate-NAT connection.
 
 After the fork-compatibility changes, a clean 128-step `zt-shared` rebuild
 passed with `ZTS_ZEROTIERONE_SOURCE_DIR` pointing directly to the `exp3`
