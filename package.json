@@ -6,6 +6,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:world-gateway": "node test/world-gateway-e2e.mjs",
+    "test:browser-host-client": "node test/browser-host-client.mjs",
     "test:account-client": "node test/account-client.mjs",
     "test:webgl-backend": "node test/webgl-backend.mjs",
     "export:island": "node tools/export-island.mjs",

@@ -275,6 +275,8 @@ func (component *worldComponent) UnmarshalJSON(data []byte) error {
 		allowed["objectId"], allowed["profile"] = true, true
 	case "tidewater.terrain-surface/1":
 		allowed["objectId"], allowed["profile"], allowed["dataAssetId"] = true, true, true
+	case "tidewater.village-materials/2":
+		allowed["objectId"], allowed["profile"], allowed["dataAssetId"] = true, true, true
 	case "tidewater.water-body/1":
 		allowed["center"], allowed["extent"], allowed["profile"] = true, true, true
 	case "tidewater.ambient-audio/1":
@@ -750,6 +752,7 @@ func validateManifest(manifest worldManifest, localPeerID string, now time.Time)
 		islandOcean := component.Type == "tidewater.island-ocean/1" && component.Seed == 0 && component.PlacementAssetID == ""
 		proceduralTerrain := component.Type == "tidewater.procedural-island-terrain/1" && component.Seed == 0 && component.PlacementAssetID == "" && component.Profile == "example-island-v1" && component.ObjectID != "" && objectByID[component.ObjectID].Kind == "asset-instance"
 		terrainSurface := component.Type == "tidewater.terrain-surface/1" && component.Seed == 0 && component.PlacementAssetID == "" && component.Profile == "example-island-v1" && component.ObjectID != "" && objectByID[component.ObjectID].Kind == "asset-instance" && component.DataAssetID != ""
+		villageMaterials := component.Type == "tidewater.village-materials/2" && component.Seed == 0 && component.PlacementAssetID == "" && component.Profile == "original-tidewater-village-v1" && component.ObjectID != "" && objectByID[component.ObjectID].Kind == "asset-instance" && component.DataAssetID != ""
 		waterBody := component.Type == "tidewater.water-body/1" && component.Seed == 0 && component.PlacementAssetID == "" && len(component.Center) == 2 && component.Extent >= 8 && component.Extent <= 100000 && (component.Profile == "" || component.Profile == "deep-ocean" || component.Profile == "calm-lagoon" || component.Profile == "storm")
 		if waterBody {
 			waterBodyCount++
@@ -777,7 +780,7 @@ func validateManifest(manifest worldManifest, localPeerID string, now time.Time)
 			}
 			boatObject = preview
 		}
-		if !componentIDPattern.MatchString(component.ID) || seenComponents[component.ID] || seenObjects[component.ID] || seenPortals[component.ID] || (!vegetation && !staticVegetation && !staticReef && !islandOcean && !proceduralTerrain && !terrainSurface && !waterBody && !ambientAudio && !boat) || islandOceanCount > 1 || waterBodyCount > 4 || ambientAudioCount > 16 || boatCount > 1 || component.Priority != "" && component.Priority != "portal-preview" && component.Priority != "visible" && component.Priority != "nearby" && component.Priority != "background" || !seenFeatures[component.Type] {
+		if !componentIDPattern.MatchString(component.ID) || seenComponents[component.ID] || seenObjects[component.ID] || seenPortals[component.ID] || (!vegetation && !staticVegetation && !staticReef && !islandOcean && !proceduralTerrain && !terrainSurface && !villageMaterials && !waterBody && !ambientAudio && !boat) || islandOceanCount > 1 || waterBodyCount > 4 || ambientAudioCount > 16 || boatCount > 1 || component.Priority != "" && component.Priority != "portal-preview" && component.Priority != "visible" && component.Priority != "nearby" && component.Priority != "background" || !seenFeatures[component.Type] {
 			return fmt.Errorf("invalid or unsupported world component %q", component.ID)
 		}
 		if waterBody && (manifest.Rules.SeaLevel == nil || islandOceanCount > 0) || islandOcean && waterBodyCount > 0 {
@@ -813,6 +816,16 @@ func validateManifest(manifest worldManifest, localPeerID string, now time.Time)
 			}
 			if !assetIDPattern.MatchString(component.DataAssetID) || !exists || asset.Kind != "terrain-surface/1" || asset.Priority != priority || asset.Bytes == 0 || asset.Bytes > 128<<20 {
 				return fmt.Errorf("invalid terrain surface asset reference on world component %q", component.ID)
+			}
+		}
+		if villageMaterials {
+			asset, exists := assetRefs[component.DataAssetID]
+			priority := component.Priority
+			if priority == "" {
+				priority = "portal-preview"
+			}
+			if !assetIDPattern.MatchString(component.DataAssetID) || !exists || asset.Kind != "village-materials/1" || asset.Priority != priority || asset.Bytes == 0 || asset.Bytes > 64<<20 {
+				return fmt.Errorf("invalid village materials asset reference on world component %q", component.ID)
 			}
 		}
 		if ambientAudio {

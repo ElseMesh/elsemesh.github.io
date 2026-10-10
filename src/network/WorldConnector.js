@@ -147,17 +147,8 @@ export class WorldConnector {
 	async #fetchManifest( signal ) {
 		const reply = await this.#request( { type: 'manifest.get' }, { signal } );
 		invariant( reply.type === 'manifest' && reply.document, 'World gateway returned no manifest' );
-		await verifySignedDocument( reply.document, 'tidewater.world/1' );
-		invariant( reply.document.payload.protocol === 'tidewater.world/1' && reply.document.payload.worldId === this.worldId, 'Manifest belongs to another world or protocol' );
-		validateWorldRequirements( reply.document.payload );
-		validateWorldExperience( reply.document.payload.experience );
-		validateWorldSpawn( reply.document.payload.spawn );
-		const entityIDs = validateWorldObjects( reply.document.payload.objects, reply.document.payload.assets );
-		validateWorldPortals( reply.document.payload.portals, entityIDs, reply.document.payload.rules );
-		validateWorldComponents( reply.document.payload.components, reply.document.payload.rules, entityIDs, reply.document.payload.assets, reply.document.payload.objects );
-		validateWorldHosts( reply.document.payload.hosts );
-		this.manifest = reply.document.payload;
-		invariant( Number.isSafeInteger( this.manifest.authorityEpoch ) && this.manifest.authorityEpoch > 0, 'Manifest authority epoch is outside the supported range' );
+		this.manifest = await verifySignedWorldManifest( reply.document );
+		invariant( this.manifest.worldId === this.worldId, 'Manifest belongs to another world' );
 		this.authorityLease = null;
 		if ( reply.authorityLease ) {
 			await verifySignedDocument( reply.authorityLease, 'tidewater.authority/2' );
@@ -775,7 +766,7 @@ function waitWithAbort( promise, signal ) {
 	} );
 }
 
-async function verifySignedDocument( document, protocol ) {
+export async function verifySignedDocument( document, protocol ) {
 	invariant( document?.protocol === protocol && typeof document.signer === 'string' && typeof document.publicKey === 'string' && typeof document.signature === 'string' && document.payload, 'Invalid signed world document' );
 	const protobufKey = decodeBase64( document.publicKey );
 	invariant( protobufKey.length === 36 && protobufKey[ 0 ] === 8 && protobufKey[ 1 ] === 1 && protobufKey[ 2 ] === 18 && protobufKey[ 3 ] === 32, 'Unsupported world signing key' );
@@ -784,6 +775,21 @@ async function verifySignedDocument( document, protocol ) {
 	const key = await crypto.subtle.importKey( 'raw', protobufKey.subarray( 4 ), { name: 'Ed25519' }, false, [ 'verify' ] );
 	const valid = await crypto.subtle.verify( 'Ed25519', key, decodeBase64( document.signature ), new TextEncoder().encode( canonicalJSON( unsigned ) ) );
 	invariant( valid, 'World signature verification failed' );
+}
+
+export async function verifySignedWorldManifest( document ) {
+	await verifySignedDocument( document, 'tidewater.world/1' );
+	const manifest = document.payload;
+	invariant( manifest.protocol === 'tidewater.world/1' && /^tw-world:[\w.-]{1,128}$/.test( manifest.worldId || '' ) && manifest.ownerPeerId === document.signer, 'Signed world manifest identity is invalid' );
+	validateWorldRequirements( manifest );
+	validateWorldExperience( manifest.experience );
+	validateWorldSpawn( manifest.spawn );
+	const entityIDs = validateWorldObjects( manifest.objects, manifest.assets );
+	validateWorldPortals( manifest.portals, entityIDs, manifest.rules );
+	validateWorldComponents( manifest.components, manifest.rules, entityIDs, manifest.assets, manifest.objects );
+	validateWorldHosts( manifest.hosts );
+	invariant( Number.isSafeInteger( manifest.authorityEpoch ) && manifest.authorityEpoch > 0, 'Manifest authority epoch is outside the supported range' );
+	return manifest;
 }
 
 function canonicalJSON( value ) {

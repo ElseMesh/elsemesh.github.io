@@ -3,6 +3,7 @@ import { UI } from './UI.js';
 import { G } from '../core/Globals.js';
 import { GroundBounce } from '../materials/GroundBounce.js';
 import { createWorldInviteURL } from '../network/WorldConnector.js';
+import { browserHostSocketURL, createBrowserHostWorker, pickBrowserWorldProfile } from '../network/BrowserHost.js';
 import { AccountClient, accountConfiguration } from '../network/AccountClient.js';
 
 // Binds the ElseMesh UI (panel + HUD) to the running app.
@@ -99,22 +100,64 @@ export class AppUI {
 		// ---------------------------------------------------------------- World invites
 		const worldTab = ui.addTab( 'world', 'World', 'globe' );
 		worldTab.addInfo( { label: 'Current world', get: () => app.worldConnector?.manifest?.title || 'Built-in island' } );
+		const browserHostState = { instance: null, status: 'Stopped', document: null, gateway: '' };
+		const hosting = worldTab.addFolder( 'Browser hosting', { icon: 'globe', open: false } );
+		hosting.addInfo( { label: 'Status', get: () => browserHostState.status } );
+		const startBrowserHost = hosting.addButton( { label: 'Host a world from this browser', icon: 'play', onClick: async () => {
+			try {
+				if ( ! window.confirm( 'Choose a world profile folder to host temporarily. Its node.key stays in this browser worker and is used only to sign a gateway challenge; it is never uploaded.' ) ) return;
+				const profile = await pickBrowserWorldProfile();
+				const gatewayInput = window.prompt( 'HTTPS/WSS gateway origin for this world', location.origin );
+				if ( gatewayInput === null ) return;
+				const gateway = new URL( gatewayInput ).origin;
+				browserHostSocketURL( gateway );
+				browserHostState.document = profile.document;
+				browserHostState.gateway = gateway;
+				browserHostState.status = 'Verifying world assets';
+				browserHostState.instance = createBrowserHostWorker( { ...profile, gateway, onStatus: status => {
+					browserHostState.status = status;
+					if ( status === 'Disconnected' || status.startsWith( 'Error:' ) ) {
+						browserHostState.instance?.stop();
+						browserHostState.instance = null;
+					}
+					updateHostControls();
+					ui.refresh();
+					if ( status.startsWith( 'Hosting ' ) ) ui.toast( status, 3200 );
+				} } );
+				updateHostControls();
+				ui.refresh();
+			} catch ( error ) {
+				if ( error.name !== 'AbortError' ) { browserHostState.status = `Error: ${error.message}`; ui.refresh(); ui.toast( browserHostState.status, 4200 ); }
+			}
+		} } );
+		const stopBrowserHost = hosting.addButton( { label: 'Stop browser hosting', icon: 'stop', variant: 'ghost', onClick: () => {
+			browserHostState.instance?.stop();
+			browserHostState.instance = null;
+			browserHostState.document = null;
+			browserHostState.status = 'Stopped';
+			updateHostControls();
+			ui.refresh();
+		} } );
+		stopBrowserHost.setVisible( false );
+		const updateHostControls = () => { startBrowserHost.setVisible( ! browserHostState.instance ); stopBrowserHost.setVisible( !! browserHostState.instance ); };
 		worldTab.addButton( { label: 'Share world invite', icon: 'link', onClick: async () => {
 
 			const connector = app.worldConnector;
-			if ( ! connector?.manifest ) {
+			const hostedDocument = browserHostState.status.startsWith( 'Hosting ' ) ? browserHostState.document : null;
+			if ( ! connector?.manifest && ! hostedDocument ) {
 				ui.toast( 'Enter a linked world to create an invite', 3200 );
 				return;
 			}
 			const url = createWorldInviteURL( {
 				pageURL: location.href,
-				worldId: connector.worldId,
-				nodeId: connector.nodeId,
-				gateway: connector.gateway,
-				directory: connector.directory,
+				worldId: hostedDocument?.payload.worldId || connector.worldId,
+				nodeId: hostedDocument?.signer || connector.nodeId,
+				gateway: hostedDocument ? browserHostState.gateway : connector.gateway,
+				directory: hostedDocument ? '' : connector.directory,
 			} );
 			try {
-				if ( navigator.share ) await navigator.share( { title: connector.manifest.title, text: `Visit ${connector.manifest.title} in ElseMesh`, url } );
+				const title = hostedDocument?.payload.title || connector.manifest.title;
+				if ( navigator.share ) await navigator.share( { title, text: `Visit ${title} in ElseMesh`, url } );
 				else {
 					if ( ! navigator.clipboard?.writeText ) throw new Error( 'This browser does not allow sharing or copying links' );
 					await navigator.clipboard.writeText( url );

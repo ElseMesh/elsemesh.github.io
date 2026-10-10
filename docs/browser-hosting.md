@@ -2,23 +2,30 @@
 
 ## Current capability
 
-The browser client is still a visitor: it has no owner-facing host controls or
-browser-host worker. `WorldConnector` opens an outbound WebSocket or
-WebTransport connection to a Go `worldd` gateway; the daemon serves the signed
-manifest and assets, or forwards requests to an authorized libp2p peer. The
-gateway now accepts authenticated reverse-host WebSocket sessions at
-`/browser-host`, serves their owner-signed manifest, and forwards bounded asset
-requests. This server-side protocol does not yet make browser hosting available
-in the shipped client. The client also has no `RTCPeerConnection` transport.
-A browser cannot open the ordinary TCP or UDP listeners used by `worldd`, so a
-static GitHub Pages deployment by itself cannot make a browser tab reachable
-as a server from arbitrary networks.
+The browser client can act as a temporary owner host through a dedicated
+module worker. In the World tab, choose **Host a world from this browser** and
+select a standalone world profile directory containing `world.json`,
+`node.key`, and `assets/<sha256>`. The client verifies the owner-signed
+manifest, confirms that `node.key` matches its owner key, and hashes every
+declared asset before connecting. It then opens the gateway's `/browser-host`
+WebSocket and answers bounded asset-range requests from those verified files.
+`WorldConnector` continues to serve visitors through a Go `worldd` gateway; the
+client still has no `RTCPeerConnection` transport. A browser cannot open the
+ordinary TCP or UDP listeners used by `worldd`.
 
-This distinction matters for availability: a browser-only host can serve a
-world only while its tab is open, but peers still need a reachable rendezvous
-and request-forwarding path to that tab. Until the owner worker and its UI are
-implemented, users need a standalone `thruholdd` or an independently operated
-gateway-connected owner/cache node.
+The owner key is read locally by the worker and used only to sign the
+gateway's fresh challenge. It is never sent to the gateway. The browser host
+currently accepts profiles up to 512 MiB and serves only declared assets. The
+browser must support the File System Access API or directory upload. A browser
+host is online only while its tab is open and active; it is not a durable
+replacement for `thruholdd`. The selected gateway must allow the page's origin
+and be reachable over WSS from invited visitors. HTTP/WS is permitted only for
+localhost development.
+
+Browser hosting does not remove the gateway dependency. The gateway must
+rendezvous with the browser session and forward asset requests; visitors do
+not connect directly to the browser tab. Users who need durable availability
+should run `thruholdd` or an authorized cache node.
 
 ## Reverse-host gateway protocol
 
@@ -45,38 +52,38 @@ per world, 32 pending requests per host and 192 KiB per asset chunk. Host
 registration has a 15-second deadline, requests have a 20-second deadline,
 and a host with no heartbeat for 45 seconds is removed. A same-owner
 re-registration replaces that owner's session. Browser-host presence messages,
-owner UI/worker integration, deployed public gateway operation and WebRTC are
-not implemented yet; the current gateway relay supports signed manifest and
-asset retrieval only.
+deployed public gateway operation and WebRTC are not implemented; the current
+gateway relay supports signed manifest and asset retrieval only.
 
-## Intended browser-host mode
+## Browser-host workflow and limits
 
-The first browser-host implementation should use the same signed manifest,
-asset hashes, world rules, and gateway request messages as standalone worlds.
-It should not introduce a second world format or require a ZeroTier client.
+The browser host uses the same signed manifest, asset hashes, world rules, and
+gateway request messages as standalone worlds. It does not introduce a second
+world format or require a ZeroTier client.
 
-1. The owner selects or imports a packaged ThruHold in the client. The client
-   verifies the signed manifest and every asset before making the package
-   available. World editing and signing remain owner-authorized operations.
-2. A dedicated Web Worker owns the package session and opens an outbound secure
-   WebSocket to a configured, public ElseMesh gateway. The worker sends a
-   heartbeat and answers bounded manifest, asset-chunk, and supported live
-   presence requests for its world.
-3. The gateway authenticates the worker against the world owner key and a
-   fresh challenge. It routes visitor requests to the active worker, applies
-   per-world and per-session quotas, and closes expired registrations. It
-   relays requests; it does not become the world owner or acquire signing
-   authority.
-4. Visitors keep using `WorldConnector`, so portal lookup, destination entry
-   rules, previews, and asset-hash verification stay the same. The invite names
-   the world and its reachable gateway. When the owner tab closes or loses its
-   connection, the gateway marks this host offline; it must not imply that the
-   world remains available.
+1. Prepare the world as a standalone profile with `world.json`, `node.key`,
+   and its `assets/` directory. For default profiles this is under
+   `~/.config/elsemesh/worlds/<profile>`.
+2. In the ElseMesh client, open **World → Browser hosting → Host a world from
+   this browser** and choose the profile directory. Confirm the key handling,
+   then enter the gateway's HTTPS/WSS origin. The worker verifies the signed
+   manifest, checks that the key belongs to its owner, and hashes every
+   manifest asset before it registers.
+3. Keep the tab open. The worker sends heartbeats and answers bounded asset
+   range requests. The gateway authenticates it with the fresh challenge and
+   relays manifest and asset retrieval to visitors. It does not receive the
+   owner's private key or acquire signing authority.
+4. Use **Share world invite** while the host status is `Hosting <world>` to
+   copy or share a URL containing the world ID, owner PeerID, and selected
+   gateway. When the tab closes or disconnects, the gateway removes the host.
 
-This baseline uses browser-native APIs and does not require WASM. It does
-require a public gateway that supports authenticated reverse connections and
-request forwarding. A gateway can be operated by the world owner or a
-community member; it must not become a mandatory central world directory.
+Browser hosting uses browser-native APIs and does not require WASM. It does
+require a reachable gateway that supports authenticated reverse connections
+and request forwarding, and the gateway must allow the website's origin. A
+gateway can be operated by the world owner or a community member; it is a
+transport rendezvous, not a mandatory central world directory. Current client
+support is limited to profiles of 512 MiB or less and declared asset retrieval;
+browser-host presence and live world state are not served by this worker.
 Portal relationships continue to identify worlds organically. They do not by
 themselves provide a network route through NAT.
 
@@ -125,6 +132,16 @@ and relay paths exist. Public hosting claims require tests against a deployed
 HTTPS/WSS gateway from a network outside the developer machine.
 
 ## Current implementation validation
+
+The browser-host UI and worker now load a profile, verify its signed manifest
+and every declared asset, check that the selected `node.key` matches the world
+owner, register through the challenge protocol, maintain heartbeats, and serve
+bounded asset ranges. Endpoint policy tests, JavaScript syntax checks, and the
+external production bundle pass. The full `npm test` suite and Go worldd tests
+also pass, including serving the Example Island and cave as separate portal-
+linked worlds. These checks do not yet exercise the owner worker in a real
+browser against a deployed public WSS gateway or test a second browser fetching
+from it. Flip7 is offline at present, so no device-side graphics check was run.
 
 The gateway integration tests cover owner proof, replay rejection, provider
 lookup, signed manifest retrieval, declared asset range forwarding, chunk-size
