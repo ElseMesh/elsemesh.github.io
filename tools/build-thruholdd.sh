@@ -13,11 +13,12 @@ case "$ROOT" in
 		DEFAULT_LIBZT_BUILD_ROOT="/mnt/kingston/builds/$parent/libzt.build"
 		;;
 	/mnt/kingston/builds/*/*.build)
-		DEFAULT_BUILD_ROOT=$ROOT
+		DEFAULT_BUILD_ROOT="$ROOT/independent"
 		relative=${ROOT#/mnt/kingston/builds/}
 		parent=${relative%/*}
 		name=${relative##*/}
 		SOURCE_ROOT="/mnt/kingston/@home/$parent/${name%.build}"
+		DEFAULT_LIBZT_BUILD_ROOT="/mnt/kingston/builds/$parent/libzt.build"
 		;;
 	*)
 		SOURCE_ROOT=${THRUHOLDD_SOURCE_ROOT:-}

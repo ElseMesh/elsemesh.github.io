@@ -185,7 +185,9 @@ and embeds an `$ORIGIN` runtime search path, so the binary starts without a
 separate `LD_LIBRARY_PATH` when both files remain together. The default network
 is compiled into the ZeroTier-enabled build, so neither the network ID nor a
 special transport flag is needed. Non-libzt `worldd` builds remain available
-for development and targets without a supported libzt toolchain.
+for development and targets without a supported libzt toolchain. The helper can
+be invoked from either the source checkout or its mirrored `.build` tree; both
+paths resolve to the same external server and sibling libzt build directories.
 
 The embedded node identity is persisted in
 `$XDG_CONFIG_HOME/elsemesh/zerotier/identity.public` and
