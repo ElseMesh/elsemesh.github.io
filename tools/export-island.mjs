@@ -99,7 +99,16 @@ if ( villageLODData.meshes.flat().some( primitive => ! primitive.attributes.COLO
 staticAssets.set( villageLODAssetId, villageLODGLB );
 const boatGLB = exportBatchGLB( generated.boatBatches, 'Moored lobster boat' );
 const boatAssetId = `sha256:${createHash( 'sha256' ).update( boatGLB ).digest( 'hex' )}`;
+const boatBounds = boundsForGLB( boatGLB );
 staticAssets.set( boatAssetId, boatGLB );
+const boatLODGLB = await readFile( path.join( REPO, 'worlds', 'island', 'lod-source', 'moored-boat-low.glb' ) );
+const boatLODAssetId = `sha256:${createHash( 'sha256' ).update( boatLODGLB ).digest( 'hex' )}`;
+const boatBaseData = parseGLB( boatGLB );
+const boatLODData = parseGLB( boatLODGLB );
+if ( triangleCount( boatLODData ) >= triangleCount( boatBaseData ) * 0.5 ) throw new Error( 'Moored boat distance LOD must use less than half the full-detail triangles' );
+if ( JSON.stringify( boatLODData.materials.map( material => material.name ).sort() ) !== JSON.stringify( boatBaseData.materials.map( material => material.name ).sort() ) ) throw new Error( 'Moored boat distance LOD must preserve all material assignments' );
+if ( boatLODData.meshes.flat().some( primitive => ! primitive.attributes.COLOR_0 || ! primitive.attributes.TEXCOORD_0 ) ) throw new Error( 'Moored boat distance LOD must preserve vertex colors and UVs' );
+staticAssets.set( boatLODAssetId, boatLODGLB );
 const debris = generated.debris;
 const vegetationDocument = Buffer.from( encodeVegetationPlacements( generated.vegetation, 7 ) );
 const vegetationAssetId = `sha256:${createHash( 'sha256' ).update( vegetationDocument ).digest( 'hex' )}`;
@@ -228,8 +237,9 @@ const source = {
 		kind: 'asset-instance',
 		label: 'Moored lobster boat (static preview)',
 		assetId: boatAssetId,
+		lods: [ { assetId: boatLODAssetId, maxScreenFraction: 0.45 } ],
 		priority: 'portal-preview',
-		streamingBounds: { center: [ WORLD.boatDock.position.x, WORLD.boatDock.position.y, WORLD.boatDock.position.z ], radius: 8 },
+		streamingBounds: boatBounds,
 		transform: { position: [ WORLD.boatDock.position.x, WORLD.boatDock.position.y, WORLD.boatDock.position.z ], yaw: WORLD.boatDock.heading },
 		scale: [ 1, 1, 1 ],
 		collision: { shape: 'none', enabled: false },

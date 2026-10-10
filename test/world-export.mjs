@@ -15,6 +15,8 @@ import { decodeReefPlacements } from '../src/network/ReefPlacements.js';
 import { decodeTerrainSurfaceAsset } from '../src/network/TerrainSurfaceAsset.js';
 import { decodeVillageMaterialAsset, VILLAGE_MATERIAL_MAPS, VILLAGE_MATERIAL_RENDERER_PROFILE } from '../src/network/VillageMaterialAsset.js';
 import { BANK } from '../src/audio/soundBank.js';
+import { transformBoundsCenter } from '../src/network/WorldStreaming.js';
+import { Vector3 } from '../src/engine/math/Vector3.js';
 
 const temporaryRoot = process.env.PREFIX ? path.join( process.env.PREFIX, 'tmp' ) : '/var/tmp';
 const output = await mkdtemp( path.join( temporaryRoot, 'elsemesh-island-export-' ) );
@@ -91,6 +93,10 @@ try {
 	assert.equal( previewGLB.meshes[ 0 ][ 0 ].indices.length, 128 * 128 * 6, 'portal terrain preview uses one sixteenth as many grid cells as full terrain' );
 	const villageObject = source.objects.find( ( object ) => object.id === 'tw-object:island-village' );
 	assert.ok( villageObject, 'export includes the procedural village and pier as portable content' );
+	const boatObject = source.objects.find( ( object ) => object.id === 'tw-object:moored-lobster-boat' );
+	assert.ok( boatObject, 'export includes the static moored boat preview' );
+	assert.equal( boatObject.lods?.length, 1, 'moored boat preview has a distant geometry variant' );
+	assert.ok( firstAssets.has( boatObject.lods[ 0 ].assetId ), 'moored boat LOD is part of the portable package' );
 	assert.deepEqual( source.rules.requiredFeatures, [ 'tidewater.static-glb/1', 'tidewater.static-glb-quaternion/1', 'tidewater.village-materials/1', 'tidewater.village-materials/2', 'tidewater.terrain-surface/1', 'tidewater.static-vegetation/1', 'tidewater.static-reef/1', 'tidewater.island-ocean/1', 'tidewater.downeast-boat/1', 'tidewater.ambient-audio/1', 'tidewater.portal-handoff/1', 'tidewater.portal-preview-static/1' ], 'portable terrain surfaces, packaged village maps, vegetation and reef, ocean, boat, audio, and portals declare runtime capabilities' );
 	assert.equal( source.portals[ 0 ].destinationWorldId, 'tw-world:loz-underneath', 'the example island links to the portable LOZ-derived cave' );
 	assert.equal( source.components.length, 6 + source.components.filter( ( component ) => component.type === 'tidewater.static-reef/1' ).length, 'portable island declares village materials, vegetation, reef tiles, terrain renderer, ocean, boat, and ambient components' );
@@ -174,6 +180,23 @@ try {
 	assert.deepEqual( [ ...new Set( villageLOD.materials.map( material => material.extras?.tidewaterMaterial?.role ).filter( Boolean ) ) ].sort(), VILLAGE_MATERIAL_ROLES.slice().sort(), 'village distance LOD preserves the trusted material-role catalog' );
 	assert.ok( villageLOD.meshes.flat().every( primitive => primitive.attributes.COLOR_0 && primitive.attributes._TW_VDATA?.itemSize === 4 ), 'village distance LOD preserves tint and trusted per-vertex material parameters' );
 	assert.deepEqual( villageObject.lods[ 0 ], { assetId: villageObject.lods[ 0 ].assetId, maxScreenFraction: 0.45 }, 'village selects lower detail only when its projected size falls below the authored threshold' );
+	const boatBase = parseGLB( firstAssets.get( boatObject.assetId ) );
+	const boatLOD = parseGLB( firstAssets.get( boatObject.lods[ 0 ].assetId ) );
+	const boatMin = [ Infinity, Infinity, Infinity ], boatMax = [ - Infinity, - Infinity, - Infinity ];
+	for ( const primitive of boatBase.meshes.flat() ) {
+		const positions = primitive.attributes.POSITION.array;
+		for ( let i = 0; i < positions.length; i += 3 ) for ( let axis = 0; axis < 3; axis ++ ) {
+			boatMin[ axis ] = Math.min( boatMin[ axis ], positions[ i + axis ] );
+			boatMax[ axis ] = Math.max( boatMax[ axis ], positions[ i + axis ] );
+		}
+	}
+	assert.deepEqual( boatObject.streamingBounds.center, boatMin.map( ( value, axis ) => ( value + boatMax[ axis ] ) * 0.5 ), 'boat LOD bounds are in asset-local coordinates' );
+	const boatWorldCenter = transformBoundsCenter( boatObject, boatObject.streamingBounds.center, new Vector3() );
+	assert.ok( boatWorldCenter.distanceTo( new Vector3( ...boatObject.transform.position ) ) < boatObject.streamingBounds.radius, 'boat screen-size selection transforms local bounds only once' );
+	assert.ok( triangleCount( boatLOD ) < triangleCount( boatBase ) * 0.5, 'moored boat distance LOD reduces geometry by more than half' );
+	assert.deepEqual( boatLOD.materials.map( material => material.name ).sort(), boatBase.materials.map( material => material.name ).sort(), 'moored boat LOD preserves the complete material catalog' );
+	assert.ok( boatLOD.meshes.flat().every( primitive => primitive.attributes.COLOR_0 && primitive.attributes.TEXCOORD_0 ), 'moored boat LOD preserves vertex colors and UVs' );
+	assert.equal( boatObject.lods[ 0 ].maxScreenFraction, 0.45, 'moored boat uses the authored projected-size threshold' );
 	const scannedObjects = source.objects.filter( ( object ) => object.id.startsWith( 'tw-object:scanned-debris-' ) );
 	assert.equal( scannedObjects.length, 141, 'export contains debris placements generated with the playable vegetation clearances' );
 	assert.ok( source.objects.every( ( object ) => object.streamingBounds && Number.isFinite( object.streamingBounds.radius ) && object.streamingBounds.radius > 0 ), 'exported island objects include local streaming bounds' );

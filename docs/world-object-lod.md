@@ -1,8 +1,8 @@
 # Reusable world-object levels of detail
 
 Status: signed contract, runtime switching, and complementary screen-door
-transitions implemented; the portable island village has one authored
-lower-detail variant. Matched-view visual validation and authored variants for
+transitions implemented; the portable island village and static moored lobster
+boat have authored lower-detail variants. Matched-view visual validation and authored variants for
 other large world objects remain outstanding.
 Avatar distance LOD is implemented separately in `RemoteAvatar.js`.
 
@@ -93,9 +93,14 @@ generated from the full-detail village GLB with
 checks that all trusted village material roles, vertex tint and `_TW_VDATA`
 survive. It reduces this object from 137,888 to 48,260 triangles (65%) and from
 14.3 MB to 7.5 MB. The base GLB remains the collision source and full-detail
-visual. Other checked-in world objects still lack authored variants. The village
-near/far image comparison and Flip7 check remain open; the mesh structure and
-runtime selector alone do not prove distant visual quality.
+visual. The moored lobster boat's portal-preview GLB also declares one lower-
+detail level at the same projected-size threshold. Its Blender 4.3.2 variant
+preserves all 12 material assignments, vertex colors and UVs, reducing it from
+46,845 to 16,395 triangles (65%) and from 2.55 MB to 1.26 MB. The base GLB
+remains the close-view source. Other checked-in world objects still lack
+authored variants. Near/far image comparisons and the Flip7 check remain open;
+the mesh structure and runtime selector alone do not prove distant visual
+quality.
 
 To regenerate the checked-in village level, export the full package to a
 temporary directory and use its full-detail village GLB as the Blender input:
@@ -108,15 +113,21 @@ blender --background --python tools/blender/export-world-object-lod.py -- \
 npm run export:island
 ```
 
+Regenerate the boat preview variant the same way, using its content-addressed
+full-detail GLB from the temporary export and writing to
+`worlds/island/lod-source/moored-boat-low.glb` with `--ratio 0.35`.
+
 The checked-in low-detail GLB is a stable export input. Package export hashes it
 into the signed content-addressed asset directory, so repeated exports do not
 need Blender and retain deterministic world-source and asset IDs.
 
-`test/world-object-lod.mjs` uses texture-free real GLBs to establish eight/four/two
-visible-triangle levels, transition progression and reversal, near-view restoration,
-independent camera selection, unchanged collision, asynchronous race handling and
-Blender validation. It does
-not establish GPU-submitted counts or near/far image fidelity. Contract tests
+`test/world-object-lod.mjs` uses texture-free GLBs to establish small-level
+selection and transitions, and loads the checked-in boat base and reduced GLBs
+to verify asset-local bounds, far-level selection, and compatible material and
+geometry installation. With `ELSEMESH_WORLD_OBJECT_LOD_RENDER=1`, headless WebGPU
+renders both actual boat levels through color and shadow passes as well as the
+masked synthetic transition fixture. These checks do not establish matched
+near/far image fidelity. Contract tests
 exercise invalid declarations and CLI hash import; Go tests cover signed validation.
 To compile and render the packaged-object fade shaders through headless WebGPU,
 run `ELSEMESH_WORLD_OBJECT_LOD_RENDER=1 node test/world-object-lod.mjs` from the

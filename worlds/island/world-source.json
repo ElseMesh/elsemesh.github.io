@@ -6093,14 +6093,20 @@
       "kind": "asset-instance",
       "label": "Moored lobster boat (static preview)",
       "assetId": "sha256:a9f0ba1bc43cf4a25aed9ad7c6f4e1c9271d166e9fae06f57d03d64af195b8db",
+      "lods": [
+        {
+          "assetId": "sha256:eed66ccd07cb5e3a6583e12fbba397b17650c224c15d8b60cc53ce83366aac74",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "portal-preview",
       "streamingBounds": {
         "center": [
-          64.5,
-          0,
-          36.5
+          -0.18741756677627563,
+          2.0450098514556885,
+          0.10958743095397949
         ],
-        "radius": 8
+        "radius": 4.815407477394323
       },
       "transform": {
         "position": [

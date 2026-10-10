@@ -12,6 +12,8 @@ import { G, setFrameCamera } from '../src/engine/render/Frame.js';
 import { MeshRenderer } from '../src/engine/render/MeshRenderer.js';
 import { SunShadows } from '../src/engine/render/Shadows.js';
 import { Scene } from '../src/engine/scene/Scene.js';
+import { Vector3 } from '../src/engine/math/Vector3.js';
+import { transformBoundsCenter } from '../src/network/WorldStreaming.js';
 
 const camera = new PerspectiveCamera(60,1,.1,1000);
 const object = {id:'tw-object:lod', kind:'asset-instance', label:'LOD fixture', assetId:'full', transform:{position:[0,0,-10],yaw:0},scale:[1,1,1], streamingBounds:{center:[0,0,0],radius:1}, collision:{enabled:true,shape:'box',center:[0,0,0],halfExtents:[1,1,1],walkable:true,solid:true},lods:[{assetId:'medium',maxScreenFraction:.12},{assetId:'low',maxScreenFraction:.04}]};
@@ -63,8 +65,8 @@ const connector={worldId:'tw-world:lod',manifest:{objects:[object],portals:[]},g
 const root = await loadWorldPackage(connector,{assets:new Map([['full',payloads.get('full')]])});
 const instance=root.children[0]; const colliders = new Colliders(); registerWorldPackageCollisions(root,colliders);
 const originalCollider=root.userData.worldPackage.activeColliders.get(object.id).collider;
-function visibleTriangles() {
- let total=0; function visit(node) {if(!node.visible)return;if(node.isMesh)total+=node.geometry.getAttribute('position').count/3;for(const child of node.children)visit(child);}visit(root);return total;
+function visibleTriangles(start = root) {
+ let total=0; function visit(node) {if(!node.visible)return;if(node.isMesh)total+=node.geometry.getAttribute('position').count/3;for(const child of node.children)visit(child);}visit(start);return total;
 }
 assert.equal(visibleTriangles(),8);
 let now=1000;
@@ -89,6 +91,19 @@ registerWorldPackageCollisions(root,colliders);
 assert.equal(root.userData.worldPackage.activeColliders.get(object.id).collider,originalCollider,'LOD does not replace collision');
 camera.position.z=0;now+=10;updateWorldPackageLOD(root,camera,0,now);assert.equal(visibleTriangles(),10,'Returning close cross-fades to the full-detail base');
 now+=200;updateWorldPackageLOD(root,camera,0,now);assert.equal(visibleTriangles(),8);
+const authoredWorld=JSON.parse(readFileSync(new URL('../worlds/island/world-source.json',import.meta.url)));
+const boatObject=authoredWorld.objects.find(item=>item.id==='tw-object:moored-lobster-boat');
+assert.ok(boatObject?.lods?.length===1,'checked-in moored boat has a packaged distance level');
+const boatAsset=id=>readFileSync(new URL(`../worlds/island/assets/${id.slice(7)}`,import.meta.url));
+const boatBaseBytes=boatAsset(boatObject.assetId),boatLowBytes=boatAsset(boatObject.lods[0].assetId);
+const boatConnector={worldId:authoredWorld.worldId,manifest:{objects:[boatObject],portals:[]},getAsset:async id=>{assert.equal(id,boatObject.lods[0].assetId);return boatLowBytes;}};
+const boatRoot=await loadWorldPackage(boatConnector,{assets:new Map([[boatObject.assetId,boatBaseBytes]])});
+const boatCenter=transformBoundsCenter(boatObject,boatObject.streamingBounds.center,new Vector3());
+const boatCamera=new PerspectiveCamera(55,1,.1,1000);boatCamera.position.copy(boatCenter).add(new Vector3(0,0,50));boatCamera.lookAt(boatCenter);
+updateWorldPackageLOD(boatRoot,boatCamera,0,2000);
+await boatRoot.userData.worldPackage.lodControllers.get(boatObject.id).pending.get(1);
+updateWorldPackageLOD(boatRoot,boatCamera,0,2000);
+assert.equal(boatRoot.userData.worldPackage.lodControllers.get(boatObject.id).transition?.to,1,'the packaged boat selects its distant level using transformed local bounds');
 const portalCamera=new PerspectiveCamera(60,1,.1,1000);portalCamera.position.z=20;
 updateWorldPackageLOD(root,portalCamera,0,now);await root.userData.worldPackage.lodControllers.get(object.id).pending.get(1);
 updateWorldPackageLOD(root,portalCamera,0,now);assert.equal(visibleTriangles(),12,'Portal view cross-fades its independently selected detail');
@@ -134,13 +149,26 @@ if(process.env.ELSEMESH_WORLD_OBJECT_LOD_RENDER==='1') {
  assert.equal(validationError,null,validationError?.message);
  assert.ok(renderer.stats.pipelines>=4,'World-object fade shaders compile for both visible levels and their color/shadow passes');
  console.log(`World-object LOD GPU smoke: ${renderer.stats.pipelines} pipelines, complementary masked GLB levels rendered`);
+ const boatScene=new Scene();boatScene.add(boatRoot);boatRoot.traverse(node=>{if(node.isMesh)node.castShadow=true;});
+ const boatRenderer=new MeshRenderer(),boatShadows=new SunShadows(),boatTarget=new RenderTarget(width,height,{colors:['rgba16float','rgba16float','rgba8unorm'],depth:'depth32float',label:'moored-boat-lod-smoke'});
+ GPU.device.pushErrorScope('validation');
+ GPU.beginFrame();setFrameCamera(boatCamera,width,height);
+ boatShadows.render(boatScene,boatRenderer,boatShadows.update(boatCamera,G.sunDir.value));
+ boatRenderer.render(boatScene,{camera:boatCamera,kind:'main',colorViews:boatTarget.textures.map(texture=>texture.view()),colorFormats:boatTarget.formats,
+  clearColors:[[.1,.15,.2,1],[0,0,0,0],[0,0,0,0]],depthView:boatTarget.depthTexture.view(),depthFormat:'depth32float',clearDepth:0});
+ GPU.submit();await GPU.device.queue.onSubmittedWorkDone();
+ const boatValidationError=await GPU.device.popErrorScope();
+ assert.equal(boatValidationError,null,boatValidationError?.message);
+ assert.ok(boatRenderer.stats.pipelines>=4 && boatRenderer.stats.draws>=24,'actual packaged boat base and distance GLBs render through color and shadow passes');
+ console.log(`Moored boat LOD GPU smoke: ${boatRenderer.stats.draws} draws, ${boatRenderer.stats.pipelines} pipelines`);
  await new Promise(resolve=>setTimeout(resolve,100));
 }
 disposeWorldPackage(root);disposeWorldPackage(root);
+disposeWorldPackage(boatRoot);
 assert.ok(root.userData.worldPackage.lodControllers.get(object.id).controller.signal.aborted);
 console.log('Object LOD: projected selection, hysteresis, async races, real GLB triangle reductions, collision and per-camera restoration passed');
 
-const authored = JSON.parse(readFileSync(new URL('../worlds/island/world-source.json',import.meta.url)));
+const authored = authoredWorld;
 authored.objects[0].lods=[{assetId:'sha256:'+'a'.repeat(64),maxScreenFraction:.12},{assetId:'sha256:'+'b'.repeat(64),maxScreenFraction:.04}];
 const validation = `import importlib.util,json,sys
 spec=importlib.util.spec_from_file_location('actions',sys.argv[1])
