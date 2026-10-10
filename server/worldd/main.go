@@ -89,7 +89,7 @@ func run() error {
 		return err
 	}
 	elsemeshConfigDir := filepath.Join(configDir, "elsemesh")
-	defaultData := filepath.Join(configDir, "tidewater", "worldd")
+	defaultData := filepath.Join(elsemeshConfigDir, "worldd")
 	worldsDir := flag.String("worlds-dir", filepath.Join(configDir, "elsemesh", "worlds"), "directory containing named local ThruHold profiles")
 	worldProfile := flag.String("world-profile", "", "select a named local ThruHold profile (uses a separate node identity and data directory)")
 	listWorldProfiles := flag.Bool("list-world-profiles", false, "list named local ThruHold profiles, then exit")
@@ -216,6 +216,15 @@ func run() error {
 	allowedBrowserOrigins, err := parseAllowedBrowserOrigins(allowedBrowserOriginsFlags)
 	if err != nil {
 		return fmt.Errorf("allow-browser-origin: %w", err)
+	}
+	if !dataWasSet && *worldProfile == "" {
+		legacyDataDir := filepath.Join(configDir, "tidewater", "worldd")
+		if err := migrateLegacyZeroTierStorage(filepath.Join(legacyDataDir, "zerotier"), *zeroTierDataDir); err != nil {
+			return fmt.Errorf("migrate existing ZeroTier identity: %w", err)
+		}
+		if err := migrateLegacyWorldData(legacyDataDir, *dataDir); err != nil {
+			return fmt.Errorf("migrate existing world data: %w", err)
+		}
 	}
 	if *listProposals || *removeProposalID != "" || *exportProposalID != "" || *inspectManifest || *publishManifestPath != "" {
 		identityPath := filepath.Join(*dataDir, "node.key")

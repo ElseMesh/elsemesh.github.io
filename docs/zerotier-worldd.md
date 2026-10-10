@@ -204,6 +204,12 @@ different ID, `thruholdd` now stops instead of silently accepting a new node.
 At first startup, existing state at the former default
 `~/.config/tidewater/worldd/zerotier/` path is moved into this location so its
 node identity is preserved.
+The default world data directory is `~/.config/elsemesh/worldd/`. At startup,
+when neither `--data` nor `--world-profile` is selected, an existing
+`~/.config/tidewater/worldd/` data directory is migrated there. Its legacy
+ZeroTier identity is moved to the device-wide directory first. If both old and
+new world data directories contain files, the daemon stops and leaves both
+untouched; choose a data directory explicitly or merge the contents manually.
 Back up the complete `zerotier` directory and restore it with the daemon on a
 new installation. Run one libzt-enabled `thruholdd` process per OS user at a
 time because they share this device identity and libzt state. A separate
