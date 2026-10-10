@@ -266,12 +266,24 @@ func (ztDialer) DialContext(ctx context.Context, _, address string) (net.Conn, e
 		}
 		return nil, fmt.Errorf("libzt TCP connect to %s failed (%d)", address, code)
 	}
-	return &ztConn{fd: fd}, nil
+	localAddr, err := ztSocketAddr(fd, false)
+	if err != nil {
+		C.zts_close(C.int(fd))
+		return nil, fmt.Errorf("read libzt local socket address: %w", err)
+	}
+	remoteAddr, err := ztSocketAddr(fd, true)
+	if err != nil {
+		C.zts_close(C.int(fd))
+		return nil, fmt.Errorf("read libzt remote socket address: %w", err)
+	}
+	return &ztConn{fd: fd, localAddr: localAddr, remoteAddr: remoteAddr}, nil
 }
 
 type ztConn struct {
-	fd        int
-	closeOnce sync.Once
+	fd         int
+	localAddr  net.Addr
+	remoteAddr net.Addr
+	closeOnce  sync.Once
 }
 
 func (c *ztConn) Read(p []byte) (int, error) {
@@ -312,8 +324,26 @@ func (c *ztConn) Close() error {
 	return nil
 }
 
-func (c *ztConn) LocalAddr() net.Addr  { return ztAddr("libzt") }
-func (c *ztConn) RemoteAddr() net.Addr { return ztAddr("libzt") }
+func (c *ztConn) LocalAddr() net.Addr {
+	if c.localAddr != nil {
+		return c.localAddr
+	}
+	addr, _ := ztSocketAddr(c.fd, false)
+	if addr == nil {
+		return &net.TCPAddr{}
+	}
+	return addr
+}
+func (c *ztConn) RemoteAddr() net.Addr {
+	if c.remoteAddr != nil {
+		return c.remoteAddr
+	}
+	addr, _ := ztSocketAddr(c.fd, true)
+	if addr == nil {
+		return &net.TCPAddr{}
+	}
+	return addr
+}
 func (c *ztConn) SetDeadline(deadline time.Time) error {
 	if err := c.SetReadDeadline(deadline); err != nil {
 		return err
@@ -346,10 +376,24 @@ func socketTimeout(deadline time.Time) (C.int, C.int) {
 	return C.int(d / time.Second), C.int((d % time.Second) / time.Microsecond)
 }
 
-type ztAddr string
-
-func (a ztAddr) Network() string { return "zerotier" }
-func (a ztAddr) String() string  { return string(a) }
+func ztSocketAddr(fd int, remote bool) (*net.TCPAddr, error) {
+	var raw [C.ZTS_INET6_ADDRSTRLEN]C.char
+	var port C.ushort
+	var code C.int
+	if remote {
+		code = C.zts_getpeername(C.int(fd), &raw[0], C.int(C.ZTS_INET6_ADDRSTRLEN), &port)
+	} else {
+		code = C.zts_getsockname(C.int(fd), &raw[0], C.int(C.ZTS_INET6_ADDRSTRLEN), &port)
+	}
+	if code != 0 {
+		return nil, fmt.Errorf("libzt socket address query failed (%d)", int(code))
+	}
+	ip := net.ParseIP(C.GoString(&raw[0]))
+	if ip == nil {
+		return nil, errors.New("libzt returned an invalid socket address")
+	}
+	return &net.TCPAddr{IP: ip, Port: int(port)}, nil
+}
 
 func osMkdirAllPrivate(path string) error {
 	if err := os.MkdirAll(path, 0700); err != nil {

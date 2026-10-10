@@ -8,6 +8,7 @@ LIBZT_LIB_DIR=${LIBZT_LIB_DIR:-}
 GOOS=${GOOS:-$(go env GOOS)}
 GOARCH=${GOARCH:-$(go env GOARCH)}
 BUILD_REVISION=${BUILD_REVISION:-$(git -C "$ROOT" rev-parse --verify HEAD)}
+LIBZT_CXX_LIB=${LIBZT_CXX_LIB:-}
 
 if [[ -z "$LIBZT_INCLUDE_DIR" || -z "$LIBZT_LIB_DIR" ]]; then
 	printf 'Set LIBZT_INCLUDE_DIR and LIBZT_LIB_DIR to a built libzt installation.\n' >&2
@@ -23,14 +24,22 @@ if [[ ! -d "$BUILD_SERVER" ]]; then
 fi
 
 OUT=${THRUHOLDD_OUT:-"$BUILD_SERVER/bin"}
+LDFLAGS="-s -w -X main.buildRevision=$BUILD_REVISION"
+if [[ -z "$LIBZT_CXX_LIB" && "$GOOS" != android ]]; then
+	LIBZT_CXX_LIB=-lstdc++
+fi
+if [[ "$GOOS" == android ]]; then
+	# github.com/wlynxg/anet uses //go:linkname for Android network APIs.
+	LDFLAGS+=' -checklinkname=0'
+fi
 mkdir -p "$OUT"
 (
 	cd "$BUILD_SERVER"
 	CGO_ENABLED=1 GOOS="$GOOS" GOARCH="$GOARCH" \
 		CGO_CFLAGS="-I$LIBZT_INCLUDE_DIR ${CGO_CFLAGS:-}" \
-		CGO_LDFLAGS="-L$LIBZT_LIB_DIR -lzt -lstdc++ ${CGO_LDFLAGS:-}" \
+		CGO_LDFLAGS="-L$LIBZT_LIB_DIR -lzt $LIBZT_CXX_LIB ${CGO_LDFLAGS:-}" \
 		go build -buildvcs=false -trimpath -tags zerotier \
-		-ldflags="-s -w -X main.buildRevision=$BUILD_REVISION" \
+		-ldflags="$LDFLAGS" \
 		-o "$OUT/thruholdd" ./worldd
 )
 printf 'Built %s/thruholdd with default ZeroTier network e3918db4832a3056.\n' "$OUT"

@@ -182,13 +182,61 @@ normal paths. The address is a transport locator only; signed identity and
 world authorization remain authoritative.
 
 This path requires a libzt build for each target architecture and its native
-dependencies. Android/Termux builds additionally need an Android libzt/cgo
-toolchain; this repository does not yet distribute prebuilt libzt libraries.
+dependencies. For Android arm64, build `libzt.so` with the Android NDK for
+`arm64-v8a` and API 26 or newer, then cross-build `thruholdd` with the matching
+NDK compiler. The Android arm64 build and Flip7 daemon validation are recorded
+below; this repository does not yet distribute prebuilt libzt libraries.
 The build also depends on the licensing terms and notices shipped with the
 exact libzt version; keep those notices with distributed builds. Users who
 already have ZeroTier One can use the native setup above without cgo. A browser
 does not join ZeroTier: it connects through the HTTPS/WSS gateway or supported
 browser peer path.
+
+## Build and validation status
+
+Android arm64 was built on Linux with NDK r29 (`29.0.14206865`), ABI
+`arm64-v8a`, and minimum API 26. The libzt configuration used
+`ZTS_NDK_ONLY=ON`, shared-library output, and disabled host-only tests and
+examples. Reproduce it with:
+
+```sh
+NDK=/path/to/android-ndk
+cmake -S /path/to/libzt -B /path/to/libzt-android-arm64-build \
+  -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 \
+  -DZTS_NDK_ONLY=ON -DBUILD_SHARED_LIB=ON -DBUILD_STATIC_LIB=OFF \
+  -DBUILD_HOST_SELFTEST=OFF -DBUILD_HOST_EXAMPLES=OFF \
+  -DALLOW_INSTALL_TARGET=OFF -DZTS_DISABLE_CENTRAL_API=ON
+cmake --build /path/to/libzt-android-arm64-build --target zt-shared --parallel
+```
+
+The resulting `libzt.so` is an AArch64 Android shared library and depends
+only on Android system libraries. Build `thruholdd` against that library and
+the matching NDK compiler with:
+
+```sh
+LIBZT_INCLUDE_DIR=/path/to/libzt/include \
+LIBZT_LIB_DIR=/path/to/android-arm64/lib \
+THRUHOLDD_BUILD_SERVER=/path/to/prepared/external/server-build \
+GOOS=android GOARCH=arm64 \
+CC=/path/to/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang \
+CXX=/path/to/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang++ \
+tools/build-thruholdd.sh
+```
+
+The build helper omits the Linux `libstdc++` linker flag on Android and applies
+the Go linker compatibility option needed by the Android network-interface
+dependency. Keep `libzt.so` beside the resulting `thruholdd` binary when
+running it.
+
+On the Flip7, two temporary `thruholdd` processes with separate libzt state
+directories joined network `e3918db4832a3056`. They received distinct 6PLANE
+addresses, dialed each other over the 6PLANE TCP path, and each reported one
+DHT peer. This verifies Android arm64 loading and a successful libzt-backed
+peer connection on one device. It does not establish connectivity between
+different devices or different NATs, and it did not exercise the game
+renderer. Test identities and files were kept under Termux `$PREFIX/tmp`; no
+permanent phone identity was created or changed.
 
 ## Remaining validation
 
@@ -200,11 +248,11 @@ own libzt state directory and ZeroTier identity, both joined public network
 `e3918db4832a3056` and received distinct 6PLANE addresses
 `fc60:bbbd:e24a:daf7:9c46::1` and `fc60:bbbd:e2f9:9b2:626f::1`. These were isolated test identities using
 explicit separate storage paths; normal installations now reuse the single
-device-wide identity described above. The second process attempted to dial the first over its 6PLANE TCP multiaddress, but the
-dial timed out and both `/healthz` responses reported zero DHT peers. The
-managed IPv4 address was not queried through libzt; current `thruholdd` code only
-uses and announces the 6PLANE IPv6 address. This was not a successful peer
-traffic test.
+device-wide identity described above. That earlier Linux pair test failed
+before the custom connection adapter was fixed. The later Flip7 test above
+confirms that the adapter can establish a peer connection. The managed IPv4
+address was not queried through libzt; current `thruholdd` code only uses and
+announces the 6PLANE IPv6 address.
 
 During that attempt, `/var/log/fw.log` recorded outbound UDP/9993 drops on
 `OUT=spod` at 19:40:55 and 19:41:00, including packets to ZeroTier root
@@ -212,7 +260,7 @@ During that attempt, `/var/log/fw.log` recorded outbound UDP/9993 drops on
 traffic on `spod`; this explains why this execution environment could not
 complete the peer test, and is not evidence that native ZeroTier One is needed
 or that the public network is misconfigured. No firewall exception was left in
-place. The concrete remaining tests are:
+place. The remaining tests are:
 
 1. Repeat a real `thruholdd` peer dial on two ordinary hosts and verify
    connection establishment plus sustained bidirectional traffic.
@@ -224,4 +272,5 @@ place. The concrete remaining tests are:
 5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
    the browser.
 6. Confirm operation while the Central API is unavailable.
-7. Build and test Android/Termux libzt and check the renderer on the Flip7.
+7. Check the game renderer and visual quality on the Flip7; the completed
+   Android test above exercised only the headless daemon.
