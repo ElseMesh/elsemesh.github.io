@@ -2,19 +2,52 @@
 
 ## Current capability
 
-The browser is currently a visitor, not a world server. `WorldConnector` opens
-an outbound WebSocket or WebTransport connection to a Go `worldd` gateway; the
-daemon then serves the signed manifest and assets, or forwards requests to an
-authorized libp2p peer. The client has no `RTCPeerConnection` transport and no
-browser-host registration protocol. A browser cannot open the ordinary TCP or
-UDP listeners used by `worldd`, so a static GitHub Pages deployment by itself
-cannot make a browser tab reachable as a server from arbitrary networks.
+The browser client is still a visitor: it has no owner-facing host controls or
+browser-host worker. `WorldConnector` opens an outbound WebSocket or
+WebTransport connection to a Go `worldd` gateway; the daemon serves the signed
+manifest and assets, or forwards requests to an authorized libp2p peer. The
+gateway now accepts authenticated reverse-host WebSocket sessions at
+`/browser-host`, serves their owner-signed manifest, and forwards bounded asset
+requests. This server-side protocol does not yet make browser hosting available
+in the shipped client. The client also has no `RTCPeerConnection` transport.
+A browser cannot open the ordinary TCP or UDP listeners used by `worldd`, so a
+static GitHub Pages deployment by itself cannot make a browser tab reachable
+as a server from arbitrary networks.
 
 This distinction matters for availability: a browser-only host can serve a
 world only while its tab is open, but peers still need a reachable rendezvous
-and request-forwarding path to that tab. Until that path is implemented and
-deployed, users need a standalone `thruholdd` or an independently operated
+and request-forwarding path to that tab. Until the owner worker and its UI are
+implemented, users need a standalone `thruholdd` or an independently operated
 gateway-connected owner/cache node.
+
+## Reverse-host gateway protocol
+
+The initial gateway endpoint is WebSocket-only. A host connects to the
+gateway's `wss://<origin>/browser-host` endpoint. The gateway sends a fresh
+32-byte nonce in `host.challenge`. The host registers one world by sending its
+owner-signed `tidewater.world/1` document and a base64 signature over the UTF-8
+message `elsemesh.browser-host/1\n<worldId>\n<nonce>`. The gateway verifies the
+world document, checks that its signer owns the world, verifies the
+nonce-bound proof, and replies `host.registered`. Reusing a proof with another
+nonce fails.
+
+An active host sends `host.heartbeat` with its world ID at least every 45
+seconds. Visitors can discover its owner PeerID through that gateway's
+`/api/lookup` response or pin the owner PeerID in an invite. The ordinary
+`/gateway` and WebTransport visitor handshake then routes `manifest.get` to the
+registered signed document and forwards declared `asset.get` chunks to the
+host as `host.request` frames. Hosts answer with matching `host.response`
+frames. The gateway rejects undeclared assets, ranges outside the signed asset
+size, oversized chunks, duplicate request IDs and mismatched response IDs.
+
+The gateway limits a daemon to 128 active browser-host sessions, four hosts
+per world, 32 pending requests per host and 192 KiB per asset chunk. Host
+registration has a 15-second deadline, requests have a 20-second deadline,
+and a host with no heartbeat for 45 seconds is removed. A same-owner
+re-registration replaces that owner's session. Browser-host presence messages,
+owner UI/worker integration, deployed public gateway operation and WebRTC are
+not implemented yet; the current gateway relay supports signed manifest and
+asset retrieval only.
 
 ## Intended browser-host mode
 

@@ -72,6 +72,8 @@ type daemon struct {
 	proposalMu            sync.Mutex
 	presenceMu            sync.Mutex
 	players               map[string]playerPresence
+	browserHostsMu        sync.RWMutex
+	browserHosts          map[string]*browserHostSession
 }
 
 func main() {
@@ -526,6 +528,7 @@ func run() error {
 	mux.HandleFunc("/api/world/proposals", d.handleWorldProposalSubmission)
 	mux.HandleFunc("/api/assets/", d.handleAsset)
 	mux.HandleFunc("/gateway", d.handleBrowserGateway)
+	mux.HandleFunc("/browser-host", d.handleBrowserHost)
 	var wtServer *webtransport.Server
 	if *webTransportAddress != "" {
 		wtServer = &webtransport.Server{H3: http3.Server{Addr: *webTransportAddress, Handler: securityHeaders(mux)}}
@@ -1021,12 +1024,18 @@ func (d *daemon) handleLookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	localCanServe := worldID == d.world.WorldID && d.canServeWorldDiscovery(time.Now())
+	browserProviders := d.browserHostProviders(worldID)
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
 	peers, err := d.discovery.FindPeers(ctx, "tidewater-world-v1:"+worldID)
 	if err != nil {
 		if localCanServe {
-			writeJSON(w, http.StatusOK, map[string]any{"worldId": worldID, "providers": []string{d.host.ID().String()}, "authority": d.currentAuthorityIdentity()})
+			providers := appendBrowserHostProviders([]string{d.host.ID().String()}, browserProviders, 16)
+			writeJSON(w, http.StatusOK, map[string]any{"worldId": worldID, "providers": providers, "authority": d.currentAuthorityIdentity()})
+			return
+		}
+		if len(browserProviders) > 0 {
+			writeJSON(w, http.StatusOK, map[string]any{"worldId": worldID, "providers": browserProviders})
 			return
 		}
 		http.Error(w, "discovery unavailable", http.StatusServiceUnavailable)
@@ -1039,7 +1048,8 @@ func (d *daemon) handleLookup(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	providers := collectProviders(d.host.ID(), localCanServe, discovered, 16)
+	providers := appendBrowserHostProviders(nil, browserProviders, 16)
+	providers = appendBrowserHostProviders(providers, collectProviders(d.host.ID(), localCanServe, discovered, 16-len(providers)), 16)
 	for _, info := range discovered {
 		if info.ID != "" && info.ID != d.host.ID() {
 			d.host.Peerstore().AddAddrs(info.ID, info.Addrs, time.Hour)
@@ -1050,6 +1060,27 @@ func (d *daemon) handleLookup(w http.ResponseWriter, r *http.Request) {
 		result["authority"] = d.currentAuthorityIdentity()
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func appendBrowserHostProviders(providers, browserProviders []string, limit int) []string {
+	if limit <= 0 {
+		return providers
+	}
+	seen := make(map[string]struct{}, len(providers)+len(browserProviders))
+	for _, provider := range providers {
+		seen[provider] = struct{}{}
+	}
+	for _, provider := range browserProviders {
+		if len(providers) >= limit {
+			break
+		}
+		if _, exists := seen[provider]; exists {
+			continue
+		}
+		seen[provider] = struct{}{}
+		providers = append(providers, provider)
+	}
+	return providers
 }
 
 func setPublicReadCORS(w http.ResponseWriter) {
@@ -1128,10 +1159,15 @@ func (d *daemon) handleAsset(w http.ResponseWriter, r *http.Request) {
 
 func (d *daemon) resolveWorldPeer(ctx context.Context, worldID, targetPeerID string) error {
 	if targetPeerID == d.host.ID().String() {
-		if worldID != d.world.WorldID {
-			return errors.New("world_not_hosted")
+		if worldID == d.world.WorldID {
+			return nil
 		}
+	}
+	if d.browserHostSession(worldID, targetPeerID) != nil {
 		return nil
+	}
+	if targetPeerID == d.host.ID().String() {
+		return errors.New("world_not_hosted")
 	}
 	peerID, err := peer.Decode(targetPeerID)
 	if err != nil {
@@ -1435,6 +1471,12 @@ func (d *daemon) localRequest(request gatewayMessage) (peerResponse, error) {
 }
 
 func (d *daemon) gatewayRequest(ctx context.Context, request gatewayMessage) (peerResponse, error) {
+	if request.TargetPeerID == d.host.ID().String() && request.WorldID == d.world.WorldID {
+		return d.localRequest(request)
+	}
+	if session := d.browserHostSession(request.WorldID, request.TargetPeerID); session != nil {
+		return session.request(ctx, request)
+	}
 	if request.TargetPeerID == d.host.ID().String() {
 		return d.localRequest(request)
 	}

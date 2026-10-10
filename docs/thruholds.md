@@ -4,10 +4,11 @@
 
 Each ThruHold is a world hosted by an independently operated ElseMesh node on Linux or Android/Termux. ThruHolds connect to one another through portals while remaining independently hosted and governed. Each has a stable `tw-world:` identifier, an owner identity, a signed versioned manifest, and one current authority epoch. Nodes have libp2p PeerIDs. Browser visitors connect to the selected node's HTTPS gateway; the gateway connects to world peers over libp2p. No central service is required for an already-known peer to host a ThruHold.
 
-The current browser is a visitor, not a server. Browser-hosted worlds and direct
-WebRTC are target capabilities; neither is implemented. The required browser
-host lifecycle, gateway relay, trust checks, and limits are described in
-[browser hosting](browser-hosting.md).
+The current browser app is a visitor and does not yet expose world hosting. The
+Go gateway has a loopback-tested authenticated reverse-host protocol for signed
+manifest and asset retrieval, but the browser worker/UI, hosted presence, and
+public deployment are not implemented. Direct WebRTC is also not implemented.
+See [browser hosting](browser-hosting.md) for details.
 
 The daemon is a transport and content service. The world owner controls the manifest, world rules, and grants. A grant independently enables `content-cache` and/or bounded `failover-authority`; caching never grants write or authority rights. Failover windows for different delegates must not overlap, preventing two owner-authorized delegates from issuing the same next epoch at once. An owner-signed failover window permits a delegate to issue a temporary higher-epoch authority lease when its window opens; the signed lease is bound to the exact host-grant epoch, and the daemon schedules activation even when it started before the window and stops serving the lease when it expires. During a valid lease, a failover-only node can be discovered through DHT or the optional directory and serve the owner-signed manifest; the browser verifies the lease and uses that node as the current authority. Asset bytes still require a separate `content-cache` grant and are retried through other providers. Manifest versions and authority epochs must fit JavaScript's safe-integer range, and each delegated lease must advance exactly one epoch. The lease does not authorize edits, produce a delegate-signed replacement world manifest, or transfer simulation state; runtime conflict recovery and shared simulation authority still need implementation before this is suitable for concurrent writes.
 

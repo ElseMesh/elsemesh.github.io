@@ -76,18 +76,22 @@ verifies Linux startup, not peer discovery or public reachability.
 
 ### Browser-hosted owner and direct browser transport
 
-The current `WorldConnector` is visitor-only: it opens WebSocket or
-WebTransport sessions to a Go gateway. Source contains no `RTCPeerConnection`,
-data-channel, or browser-host registration protocol. A browser cannot accept
-the daemon's ordinary TCP/UDP listeners, so browser hosting needs an outbound
-authenticated host session and a reachable gateway that forwards world
-requests while the tab is open. Direct WebRTC additionally needs signaling and
-STUN/TURN or gateway fallback. See [browser-hosting.md](browser-hosting.md) for
-the target protocol, lifecycle, security boundaries, and acceptance checks.
+`WorldConnector` remains visitor-only and opens WebSocket or WebTransport
+sessions to a Go gateway. The gateway now has a locally tested `/browser-host`
+WebSocket endpoint: it verifies a fresh owner-key proof, serves the registered
+signed manifest, discovers active browser-host owners through `/api/lookup`,
+and forwards bounded asset requests. `worldd` limits hosts and pending
+requests and removes a host after heartbeat expiry. The shipped browser has no
+owner worker or host controls yet, and browser-host presence is not supported.
+There is no `RTCPeerConnection` or data-channel transport. Direct WebRTC still
+needs signaling and STUN/TURN or gateway fallback. See
+[browser-hosting.md](browser-hosting.md) for the protocol and remaining checks.
 
-These capabilities are not implemented or publicly deployed. Current browser
-world access requires an HTTPS/WSS gateway connected to a standalone owner or
-authorized cache node.
+Browser-host registration and serving have loopback tests only. The browser
+worker/UI, public HTTPS/WSS deployment, external-network tests, browser-host
+presence, and WebRTC are not implemented; normal browser world access still
+requires an HTTPS/WSS gateway connected to a standalone owner or authorized
+cache node.
 
 ### 1. Complete the island as a portable example world
 
