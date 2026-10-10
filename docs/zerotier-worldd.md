@@ -101,10 +101,11 @@ ZeroTier interface.
 ## Browser access and decentralized world access
 
 Ordinary browsers do not join the ZeroTier LAN. Publish the daemon's HTTPS/WSS
-gateway and configure the hosted client to use that gateway. Direct WebRTC may
-be used where the client and host can establish a peer path; the public gateway
-or an available libp2p relay remains the fallback. Do not expose the Central API
-token to a browser.
+gateway and configure the hosted client to use that gateway. Direct browser
+WebRTC is a planned path, not implemented yet; until then browsers use the
+gateway. Browser-hosted owner sessions also need a reachable reverse gateway
+path and are not implemented yet; see [browser hosting](browser-hosting.md).
+Do not expose the Central API token to a browser.
 
 Portal links identify worlds and peers using signed ElseMesh identity. A ZeroTier
 address is a transport locator, not proof of ownership or permission. Central

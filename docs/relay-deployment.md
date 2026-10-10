@@ -136,10 +136,12 @@ To find a ThruHold without a directory, its manifest must be discoverable in
 the DHT, and the requesting gateway/node must already have a route to DHT
 peers. Portals can then name the destination world ID without pinning one
 provider PeerID; a gateway connected to the mesh resolves providers and
-forwards the browser request. Browser players still use an HTTPS/WSS gateway
-or supported direct WebRTC path and do not join the native libp2p or ZeroTier
-network themselves. The gateway daemon needs the same bootstrap/relay setup if
-the world's owner is reachable only through a circuit relay.
+forwards the browser request. Browser players use an HTTPS/WSS gateway and do
+not join the native libp2p or ZeroTier network themselves. Direct browser
+WebRTC is a planned path, not implemented yet. The gateway daemon needs the
+same bootstrap/relay setup if the world's owner is reachable only through a
+circuit relay. Browser-hosted owner sessions and their required reverse
+gateway path are described in [browser hosting](browser-hosting.md).
 
 ## Checks and limits
 

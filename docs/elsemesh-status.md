@@ -74,6 +74,21 @@ verifies Linux startup, not peer discovery or public reachability.
 
 ## Remaining implementation gates
 
+### Browser-hosted owner and direct browser transport
+
+The current `WorldConnector` is visitor-only: it opens WebSocket or
+WebTransport sessions to a Go gateway. Source contains no `RTCPeerConnection`,
+data-channel, or browser-host registration protocol. A browser cannot accept
+the daemon's ordinary TCP/UDP listeners, so browser hosting needs an outbound
+authenticated host session and a reachable gateway that forwards world
+requests while the tab is open. Direct WebRTC additionally needs signaling and
+STUN/TURN or gateway fallback. See [browser-hosting.md](browser-hosting.md) for
+the target protocol, lifecycle, security boundaries, and acceptance checks.
+
+These capabilities are not implemented or publicly deployed. Current browser
+world access requires an HTTPS/WSS gateway connected to a standalone owner or
+authorized cache node.
+
 ### 1. Complete the island as a portable example world
 
 - Preserve the village's material fidelity in the portable GLB and represent the boat and other interactive systems as versioned data-driven components without replacing or degrading the built-in procedural game path. Static reef placements now export deterministically to hash-verified 64 m tiles with conservative model bounds and render through the existing client Reef pipeline; fish simulation, collisions, and other reef behavior are still absent from hosted worlds. Static plant placements travel as signed-manifest-referenced, hash-verified world-space records; other worlds still need a general terrain-driven vegetation/grass contract.
