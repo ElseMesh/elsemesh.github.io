@@ -472,6 +472,39 @@ func TestWorldManifestValidatesDeterministicMovementRules(t *testing.T) {
 	}
 }
 
+func TestWorldManifestValidatesDestinationVehiclePolicy(t *testing.T) {
+	var unknownFieldRules worldRules
+	if err := json.Unmarshal([]byte(`{"vehiclePolicy":{"enabled":true,"unknown":1}}`), &unknownFieldRules); err == nil {
+		t.Fatal("unknown vehicle policy field accepted")
+	}
+	key := testKey(t)
+	ownerID, err := peer.IDFromPublicKey(key.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := newStarterManifest("Vehicle policy", ownerID.String())
+	manifest.WorldID = "tw-world:vehicle-policy"
+	maxSpeed := 8.0
+	maxComplexity := uint32(50000)
+	manifest.Rules.VehiclePolicy = &vehiclePolicy{Enabled: true, MaxSpeed: &maxSpeed, MaxCombinedComplexity: &maxComplexity}
+	if err := validateManifest(manifest, ownerID.String(), time.Now()); err != nil {
+		t.Fatalf("valid destination vehicle policy rejected: %v", err)
+	}
+	manifest.Rules.VehiclePolicy.MaxSpeed = nil
+	if err := validateManifest(manifest, ownerID.String(), time.Now()); err == nil {
+		t.Fatal("enabled vehicle policy without a speed cap accepted")
+	}
+	manifest.Rules.VehiclePolicy = &vehiclePolicy{Enabled: false, MaxSpeed: &maxSpeed}
+	if err := validateManifest(manifest, ownerID.String(), time.Now()); err == nil {
+		t.Fatal("disabled vehicle policy with limits accepted")
+	}
+	manifest.Rules.VehiclePolicy = &vehiclePolicy{Enabled: true, MaxSpeed: &maxSpeed, MaxCombinedComplexity: &maxComplexity}
+	*manifest.Rules.VehiclePolicy.MaxCombinedComplexity = 1000001
+	if err := validateManifest(manifest, ownerID.String(), time.Now()); err == nil {
+		t.Fatal("vehicle complexity above supported maximum accepted")
+	}
+}
+
 func TestWorldManifestValidatesOptionalEnvironmentLevels(t *testing.T) {
 	key := testKey(t)
 	ownerID, err := peer.IDFromPublicKey(key.GetPublic())

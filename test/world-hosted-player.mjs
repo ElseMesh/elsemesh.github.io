@@ -3,7 +3,7 @@ import { Vector3 } from '../src/engine/math/Vector3.js';
 import { Quaternion } from '../src/engine/math/Quaternion.js';
 import { Player } from '../src/player/Player.js';
 import { App } from '../src/App.js';
-import { mapPortalPlayerState } from '../src/network/PortalHandoff.js';
+import { mapPortalPlayerState, mapPortalVehicleState } from '../src/network/PortalHandoff.js';
 import { Colliders } from '../src/world/Colliders.js';
 import { keyboardLookDelta } from '../src/core/Input.js';
 
@@ -135,4 +135,55 @@ jumpPressed = false;
 player.updateHostedWorld( 1 / 60 );
 assert.ok( [ ...player.position.toArray(), ...player.velocity.toArray(), ...camera.position.toArray() ].every( Number.isFinite ), 'first destination frame keeps all motion and camera coordinates finite' );
 assert.ok( Math.abs( player.velocity.y - ( 4.6 - 9.81 * 0.5 / 60 ) ) < 1e-9, 'destination physics continues the jump with its own gravity' );
+
+const vehicleModel = { traverse( visit ) { visit( { isMesh: true, geometry: { attributes: { position: { count: 300 } }, drawRange: { start: 0, count: Infinity } } } ); } };
+const vehicleGate = Object.assign( Object.create( App.prototype ), {
+	player: { mode: 'boat' }, activeHostedBoat: { boat: { controller: {}, model: { group: vehicleModel } } },
+} );
+const acceptingWorld = { manifest: { rules: { avatarComplexity: 200, vehiclePolicy: { enabled: true, maxSpeed: 8, maxCombinedComplexity: 500 } }, components: [ { type: 'tidewater.downeast-boat/1' } ] } };
+assert.deepEqual( vehicleGate.vehicleTransferStatus( acceptingWorld ), { allowed: true, maxSpeed: 8 }, 'destination accepts a vehicle within the combined triangle budget' );
+acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 299;
+assert.equal( vehicleGate.vehicleTransferStatus( acceptingWorld ).allowed, false, 'destination denies a vehicle above the combined triangle budget' );
+acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 500;
+acceptingWorld.manifest.components = [];
+assert.equal( vehicleGate.vehicleTransferStatus( acceptingWorld ).allowed, false, 'destination denies transfer without a compatible boat berth' );
+
+const vehiclePlayer = Object.assign( Object.create( Player.prototype ), {
+	camera: { position: new Vector3( 0, 2, 0 ), quaternion: new Quaternion() }, colliders,
+	position: new Vector3(), velocity: new Vector3( 0, 0, 3 ), yaw: 0.4, pitch: 0.1, mode: 'boat',
+	deckPos: new Vector3( 1, 0, 2 ), deckYaw: 0.2, audio: null,
+} );
+const sourceVehicleController = {
+	transferState: () => ( { position: new Vector3( 2, 1, 3 ), quaternion: new Quaternion(), velocity: new Vector3( 0, 0, 7 ), angular: new Vector3( 0, 0.2, 0 ), throttle: 0.6, steer: 0.1, rpm: 0.7, driven: true } ),
+	driven: true, throttle: 0.6, throttleTarget: 0.6, steer: 0.1, _acc: 0,
+};
+vehiclePlayer.boat = sourceVehicleController;
+let acceptedVehicleState;
+let appliedVehicleLimit;
+const destinationBoatController = {
+	setMaxSpeed: ( speed ) => { appliedVehicleLimit = speed; },
+	acceptTransfer: ( state, speed ) => { acceptedVehicleState = state; appliedVehicleLimit = speed; },
+};
+const sourceBoatRuntime = { boat: { controller: sourceVehicleController }, deactivate() {} };
+const destinationBoatRuntime = { hostedBoat: true, boat: { controller: destinationBoatController }, activate() { return destinationBoatController; }, deactivate() {} };
+const vehicleSourceConnector = { worldId: 'tw-world:vehicle-source', close() {} };
+const vehicleDestination = {
+	worldId: 'tw-world:vehicle-destination', nodeId: '1234567890123456789012345', gateway: 'http://127.0.0.1:5193',
+	manifest: { title: 'Vehicle destination', components: [ { type: 'tidewater.downeast-boat/1' } ], rules: { gravity: 1, avatarComplexity: 200, vehiclePolicy: { enabled: true, maxSpeed: 6, maxCombinedComplexity: 1000 } } },
+};
+const vehiclePortalApp = Object.assign( Object.create( App.prototype ), {
+	player: vehiclePlayer, camera: vehiclePlayer.camera, worldConnector: vehicleSourceConnector, activeHostedBoat: sourceBoatRuntime,
+	linkedWorldRoot: { userData: {} }, hostedColliders: colliders, hostedQuery: {}, hostedPlayerSlot: 0,
+	scene: { remove() {}, add() {} }, worldBackgroundLoads: new Map(), remoteWorlds: new Map(), portalPreviousPosition: new Vector3(),
+	portalPreparations: new Map(), streamWorldRemainder() {}, startWorldPresence() {},
+} );
+const vehicleDestinationRoot = { userData: { worldComponents: [ destinationBoatRuntime ] } };
+const expectedVehicleState = mapPortalVehicleState( sourceVehicleController.transferState(), handoffPortal.entry, handoffPortal.exit );
+vehiclePortalApp.enterWorldPortal( handoffPortal, { connector: vehicleDestination, root: vehicleDestinationRoot } );
+assert.equal( vehiclePlayer.mode, 'boat', 'helm mode survives destination activation' );
+assert.equal( vehiclePlayer.boat, destinationBoatController, 'player reattaches to the destination boat controller' );
+assert.ok( acceptedVehicleState.position.distanceTo( expectedVehicleState.position ) < 1e-9, 'destination boat receives the transformed origin' );
+assert.ok( acceptedVehicleState.quaternion.angleTo( expectedVehicleState.quaternion ) < 1e-9, 'destination boat receives the transformed orientation' );
+assert.ok( Math.abs( acceptedVehicleState.velocity.length() - 7 ) < 1e-9, 'handoff preserves vehicle speed before destination policy is applied' );
+assert.equal( appliedVehicleLimit, 6, 'destination speed limit reaches the transferred boat controller' );
 console.log( 'ok   hosted first-person movement uses only active world colliders' );

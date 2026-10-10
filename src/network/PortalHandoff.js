@@ -56,6 +56,19 @@ export function rotatePortalVelocity( velocity, entryYaw, exitYaw ) {
 	return { x: velocity.x * cos + velocity.z * sin, y: velocity.y ?? 0, z: - velocity.x * sin + velocity.z * cos };
 }
 
+// Carry the built-in vehicle's rigid-body state through the same yaw-only
+// transform as the player. Vehicle portability is a destination opt-in.
+export function mapPortalVehicleState( state, entry, exit ) {
+	const yawDelta = exit.yaw - entry.yaw;
+	const rotation = new Quaternion().setFromAxisAngle( _up, yawDelta );
+	return {
+		position: new Vector3().copy( state.position ).sub( new Vector3().fromArray( entry.position ) ).applyAxisAngle( _up, yawDelta ).add( new Vector3().fromArray( exit.position ) ),
+		quaternion: rotation.multiply( state.quaternion.clone() ).normalize(),
+		velocity: new Vector3( state.velocity.x, state.velocity.y, state.velocity.z ).applyAxisAngle( _up, yawDelta ),
+		angular: new Vector3( state.angular.x, state.angular.y, state.angular.z ).applyAxisAngle( _up, yawDelta ),
+	};
+}
+
 // Preserve the visitor's offset and view through the same rigid transform used
 // for the open doorway camera. Destination rules apply to subsequent physics;
 // the crossing itself preserves world-space momentum, including a jump or fall.

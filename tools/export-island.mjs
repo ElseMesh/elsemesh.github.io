@@ -169,6 +169,7 @@ const source = {
 		seaLevel: 0,
 		avatarComplexity: 20000,
 		physicsProfile: 'tidewater-default',
+		vehiclePolicy: { enabled: true, maxSpeed: 8, maxCombinedComplexity: 100000 },
 			requiredFeatures: [ 'tidewater.static-glb/1', 'tidewater.static-glb-quaternion/1', 'tidewater.village-materials/1', 'tidewater.terrain-surface/1', 'tidewater.static-vegetation/1', 'tidewater.static-reef/1', 'tidewater.island-ocean/1', 'tidewater.downeast-boat/1', 'tidewater.ambient-audio/1', 'tidewater.portal-handoff/1', 'tidewater.portal-preview-static/1' ],
 		maxPackageBytes: 96 * 1024 * 1024,
 	},

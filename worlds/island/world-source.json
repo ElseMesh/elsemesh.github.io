@@ -46,6 +46,11 @@
     "seaLevel": 0,
     "avatarComplexity": 20000,
     "physicsProfile": "tidewater-default",
+    "vehiclePolicy": {
+      "enabled": true,
+      "maxSpeed": 8,
+      "maxCombinedComplexity": 100000
+    },
     "requiredFeatures": [
       "tidewater.static-glb/1",
       "tidewater.static-glb-quaternion/1",

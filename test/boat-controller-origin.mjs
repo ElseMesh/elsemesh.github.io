@@ -31,4 +31,13 @@ assert.deepEqual( hostedBoat.position.toArray(), berth.toArray(), 'physics reset
 assert.deepEqual( hostedBoat.mooring.anchor.toArray(), berth.toArray(), 'physics reset restores this world’s mooring point' );
 assert.equal( hostedBoat.mooring.heading, heading, 'physics reset restores this world’s mooring heading' );
 
+hostedBoat.acceptTransfer( {
+	position: new Vector3( 8, 1, - 3 ), quaternion: defaultBoat.quaternion.clone(), velocity: new Vector3( 0, 0, 12 ), angular: new Vector3( 0, 0, 0 ),
+	throttle: 0.5, steer: - 0.2, rpm: 0.7, driven: true,
+}, 6 );
+assert.deepEqual( hostedBoat.position.toArray(), [ 8, 1, - 3 ], 'destination boat accepts the mapped position' );
+assert.equal( hostedBoat.velocity.length(), 6, 'destination policy caps imported vehicle speed immediately' );
+assert.equal( hostedBoat.driven, true, 'vehicle helm state survives transfer' );
+assert.equal( hostedBoat.moored, false, 'a transferred vehicle is not reset to the destination berth' );
+
 console.log( 'ok boat controller uses per-world berth while preserving the built-in island default' );

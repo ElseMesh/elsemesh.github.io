@@ -20,6 +20,7 @@ export const SUPPORTED_WORLD_FEATURES = new Set( [
 ] );
 export const SUPPORTED_PHYSICS_PROFILES = new Set( [ 'default', 'tidewater-default' ] );
 export const DEFAULT_WORLD_MOVEMENT = Object.freeze( { walkSpeed: 3, sprintSpeed: 6.2, jumpSpeed: 4.6 } );
+export const DEFAULT_VEHICLE_POLICY = Object.freeze( { enabled: false } );
 export const MAX_WORLD_PACKAGE_BYTES = 16 * 1024 * 1024 * 1024;
 
 const FEATURE_ID = /^tidewater\.[a-z0-9.-]+\/\d+$/;
@@ -31,6 +32,7 @@ export function validateWorldRequirements( manifest ) {
 	}
 	validateWorldLevels( rules );
 	movementParameters( rules );
+	vehiclePolicy( rules );
 	validateWorldPackageBudget( manifest );
 	const required = rules.requiredFeatures ?? [];
 	if ( ! Array.isArray( required ) || required.length > 64 ) throw new Error( 'World manifest contains an invalid requiredFeatures list' );
@@ -72,6 +74,19 @@ export function movementParameters( rules ) {
 		throw new Error( 'World movement speeds are outside the supported range' );
 	}
 	return { walkSpeed: movement.walkSpeed, sprintSpeed: movement.sprintSpeed, jumpSpeed: movement.jumpSpeed };
+}
+
+// Vehicle transfer is opt-in because a destination must explicitly accept the
+// bundled vehicle simulation and its resource budget.
+export function vehiclePolicy( rules ) {
+	const policy = rules?.vehiclePolicy ?? DEFAULT_VEHICLE_POLICY;
+	if ( ! policy || typeof policy !== 'object' || Array.isArray( policy ) || typeof policy.enabled !== 'boolean' ) throw new Error( 'World vehicle policy is invalid' );
+	if ( ! policy.enabled ) {
+		if ( Object.keys( policy ).some( ( key ) => key !== 'enabled' ) ) throw new Error( 'Disabled world vehicle policy cannot declare limits' );
+		return { enabled: false };
+	}
+	if ( Object.keys( policy ).some( ( key ) => ! [ 'enabled', 'maxSpeed', 'maxCombinedComplexity' ].includes( key ) ) || ! Number.isFinite( policy.maxSpeed ) || policy.maxSpeed < 0.5 || policy.maxSpeed > 16 || ! Number.isInteger( policy.maxCombinedComplexity ) || policy.maxCombinedComplexity < 1 || policy.maxCombinedComplexity > 1000000 ) throw new Error( 'World vehicle policy limits are invalid' );
+	return { enabled: true, maxSpeed: policy.maxSpeed, maxCombinedComplexity: policy.maxCombinedComplexity };
 }
 
 export function gravityAcceleration( rules ) {

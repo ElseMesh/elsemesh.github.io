@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { alignPortalPreview, crossedPortalPlane, mapPortalCamera, mapPortalPlayerState, portalExitClipPlane, rotatePortalVelocity, updatePortalPreviewComponents } from '../src/network/PortalHandoff.js';
+import { alignPortalPreview, crossedPortalPlane, mapPortalCamera, mapPortalPlayerState, mapPortalVehicleState, portalExitClipPlane, rotatePortalVelocity, updatePortalPreviewComponents } from '../src/network/PortalHandoff.js';
 import { PerspectiveCamera } from '../src/engine/scene/Camera.js';
 import { Vector3 } from '../src/engine/math/Vector3.js';
+import { Quaternion } from '../src/engine/math/Quaternion.js';
 import { Vector4 } from '../src/engine/math/Vector4.js';
 import { Material } from '../src/engine/render/Material.js';
 import { buildMeshShader } from '../src/engine/render/MeshShader.js';
@@ -37,6 +38,12 @@ assert.equal( crossedPortalPlane( { x: 1, y: 1, z: 1 }, { x: - 1, y: 1, z: - 1 }
 const velocity = rotatePortalVelocity( { x: 0, z: - 1 }, 0, Math.PI / 2 );
 assert.ok( Math.abs( velocity.x + 1 ) < 1e-9 && Math.abs( velocity.z ) < 1e-9, 'velocity follows the destination orientation' );
 assert.equal( velocity.y, 0, 'legacy horizontal velocity inputs have a finite vertical component' );
+const boatState = { position: new Vector3( 1, 2, 3 ), quaternion: new Quaternion(), velocity: new Vector3( 0, 1, 4 ), angular: new Vector3( 1, 2, 3 ) };
+boatState.quaternion.setFromAxisAngle( new Vector3( 0, 1, 0 ), 0.25 );
+const mappedBoat = mapPortalVehicleState( boatState, { position: [ 0, 0, 0 ], yaw: 0 }, { position: [ 20, 0, 0 ], yaw: Math.PI / 2 } );
+assert.ok( mappedBoat.position.distanceTo( new Vector3( 23, 2, - 1 ) ) < 1e-9, 'vehicle origin follows the portal transform' );
+assert.ok( mappedBoat.velocity.distanceTo( new Vector3( 4, 1, 0 ) ) < 1e-9, 'vehicle velocity follows the portal transform' );
+assert.ok( mappedBoat.angular.distanceTo( new Vector3( 3, 2, - 1 ) ) < 1e-9, 'vehicle angular velocity follows the portal transform' );
 for ( const verticalSpeed of [ 4.6, - 9.81, 0 ] ) {
 	const entry = { position: [ 2, 3, - 7 ], yaw: - 0.4 };
 	const exit = { position: [ - 10, 5, 20 ], yaw: 1.2 };

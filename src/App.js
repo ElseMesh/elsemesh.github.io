@@ -78,7 +78,8 @@ import { worldSpawnPose } from './network/WorldSource.js';
 import { updateWorldPackageLOD, appendWorldPackageAssets, disposeWorldPackage, loadWorldPackage, registerWorldPackageCollisions, unregisterWorldPackageCollisions } from './network/WorldPackage.js';
 import { HostedBoat } from './network/HostedBoat.js';
 import { selectWorldComponentsForView, selectWorldObjectsForView } from './network/WorldStreaming.js';
-import { portalRouteFromPosition, crossedPortalPlane, mapPortalPlayerState } from './network/PortalHandoff.js';
+import { portalRouteFromPosition, crossedPortalPlane, mapPortalPlayerState, mapPortalVehicleState } from './network/PortalHandoff.js';
+import { vehiclePolicy } from './network/WorldRules.js';
 import { WorldPresenceSession } from './network/WorldPresenceSession.js';
 import { WorldPortalView } from './network/WorldPortalView.js';
 import { RenderLoadLOD } from './network/RenderLoadLOD.js';
@@ -953,6 +954,10 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		const runtime = ( root.userData.worldComponents || [] ).find( ( component ) => component.hostedBoat );
 		this.activeHostedBoat = runtime || null;
 		this.player.boat = runtime ? runtime.activate( { query: this.hostedQuery, colliders: this.hostedColliders } ) : null;
+		if ( runtime ) {
+			const policy = vehiclePolicy( connector.manifest.rules );
+			if ( policy.enabled ) this.player.boat.setMaxSpeed( policy.maxSpeed );
+		}
 		this.startWorldPresence( root, connector );
 
 	}
@@ -1126,6 +1131,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 			if ( signal.aborted ) { this.disposeUncommittedWorldComponents( root ); prepared.connector.close(); return; }
 				root.name = `hosted-world:${portal.destinationWorldId}`;
 				Object.assign( preparation, { status: 'ready', connector: prepared.connector, root } );
+				preparation.vehicleTransfer = this.vehicleTransferStatus( prepared.connector );
 				this.remoteWorlds.set( portal.destinationWorldId, { connector: prepared.connector, root } );
 			} ).catch( ( error ) => {
 				if ( signal.aborted ) {
@@ -1139,7 +1145,9 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 				console.warn( `Could not prepare portal ${portalKey}`, error );
 			} );
 		}
-		if ( portal.openView && preparation.root ) {
+		const ridingVehicle = this.player.mode === 'boat' || this.player.mode === 'deck';
+		const vehicleTransfer = preparation.connector ? this.vehicleTransferStatus( preparation.connector ) : preparation.vehicleTransfer;
+		if ( portal.openView && preparation.root && ( ! ridingVehicle || vehicleTransfer?.allowed ) ) {
 			if ( this.portalPreviewId !== portalKey ) this.clearPortalPreview();
 			this.portalPreviewId = portalKey;
 			this.portalView.setTarget( preparation.root, portal );
@@ -1149,6 +1157,14 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		if ( ! crossed ) return;
 		if ( preparation.status === 'ready' ) {
+			if ( ridingVehicle && ! vehicleTransfer?.allowed ) {
+				this.holdPlayerAtPortal( previous );
+				if ( ! preparation.vehicleBlockedNoticeShown ) {
+					preparation.vehicleBlockedNoticeShown = true;
+					this.ui?.ui?.toast( vehicleTransfer?.reason || 'This ThruHold does not accept vehicle entry', 3500 );
+				}
+				return;
+			}
 			this.enterWorldPortal( portal, preparation );
 			return;
 		}
@@ -1157,12 +1173,44 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// signed manifest and prioritized destination assets are ready.
 		this.camera.position.copy( previous );
 		this.portalPreviousPosition.copy( previous );
-		this.player.setHostedWorldPose( previous, this.player.yaw, this.player.pitch );
+		this.holdPlayerAtPortal( previous );
 		if ( ! preparation.noticeShown ) {
 			preparation.noticeShown = true;
 			this.ui?.ui?.toast( preparation.status === 'failed' ? 'This portal could not load its destination' : 'Preparing the world beyond this portal…', 3500 );
 		}
 
+	}
+
+	holdPlayerAtPortal( previous ) {
+		const mode = this.player.mode;
+		if ( mode === 'boat' || mode === 'deck' ) {
+			const snapshot = this.portalVehiclePreviousState;
+			if ( snapshot?.controller === this.activeHostedBoat?.boat.controller ) {
+				snapshot.controller.acceptTransfer( snapshot.state, snapshot.controller.maxSpeed );
+				this.player.mode = snapshot.mode;
+				this.player.deckPos.copy( snapshot.deckPos );
+				this.player.deckYaw = snapshot.deckYaw;
+			}
+			this.camera.position.copy( previous );
+			return;
+		}
+		const velocity = this.player.velocity.clone();
+		this.camera.position.copy( previous );
+		this.player.setHostedWorldPose( previous, this.player.yaw, this.player.pitch );
+		this.player.velocity.copy( velocity );
+		this.player.mode = mode;
+	}
+
+	vehicleTransferStatus( destinationConnector ) {
+		if ( ! [ 'boat', 'deck' ].includes( this.player.mode ) ) return { allowed: true };
+		const sourceController = this.activeHostedBoat?.boat.controller;
+		if ( ! sourceController ) return { allowed: false, reason: 'The current vehicle cannot be transferred' };
+		const policy = vehiclePolicy( destinationConnector.manifest.rules );
+		if ( ! policy.enabled ) return { allowed: false, reason: 'This ThruHold does not accept vehicles' };
+		if ( ! destinationConnector.manifest.components.some( ( component ) => component.type === 'tidewater.downeast-boat/1' ) ) return { allowed: false, reason: 'This ThruHold has no compatible boat berth' };
+		const combinedComplexity = destinationConnector.manifest.rules.avatarComplexity + boatTriangleCount( this.activeHostedBoat.boat.model.group );
+		if ( combinedComplexity > policy.maxCombinedComplexity ) return { allowed: false, reason: 'This vehicle exceeds the ThruHold complexity limit' };
+		return { allowed: true, maxSpeed: policy.maxSpeed };
 	}
 
 	clearPortalPreview() {
@@ -1198,6 +1246,10 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		const destinationConnector = preparation.connector;
 		const destinationRoot = preparation.root;
 		this.clearPortalPreview();
+		const sourceVehicleMode = this.player.mode;
+		const sourceVehicle = [ 'boat', 'deck' ].includes( sourceVehicleMode ) ? this.activeHostedBoat?.boat.controller?.transferState() : null;
+		const deckPosition = this.player.deckPos.clone();
+		const deckYaw = this.player.deckYaw;
 		const arrival = mapPortalPlayerState( {
 			position: this.camera.position, velocity: this.player.velocity,
 			yaw: this.player.yaw, pitch: this.player.pitch,
@@ -1215,6 +1267,15 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		G.seaLevel.value = worldSeaLevel( destinationConnector.manifest.rules );
 		this.player.setHostedWorldPose( arrival.position, arrival.yaw, arrival.pitch );
 		this.activateHostedWorld( destinationRoot, destinationConnector );
+		if ( sourceVehicle ) {
+			const destinationBoat = this.activeHostedBoat?.boat.controller;
+			const policy = vehiclePolicy( destinationConnector.manifest.rules );
+			const mappedVehicle = mapPortalVehicleState( sourceVehicle, portal.entry, portal.exit );
+			destinationBoat.acceptTransfer( { ...sourceVehicle, ...mappedVehicle }, policy.maxSpeed );
+			this.player.mode = sourceVehicleMode;
+			this.player.deckPos.copy( deckPosition );
+			this.player.deckYaw = deckYaw;
+		}
 		this.remoteWorlds.set( destinationConnector.worldId, { connector: destinationConnector, root: destinationRoot } );
 		this.streamWorldRemainder( destinationConnector, destinationRoot );
 
@@ -1270,6 +1331,10 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		}
 		if ( this.remoteWorldActive ) {
 			const hostedBoat = this.activeHostedBoat?.boat.controller;
+			this.portalVehiclePreviousState = [ 'boat', 'deck' ].includes( this.player.mode ) && hostedBoat ? {
+				controller: hostedBoat, state: hostedBoat.transferState(), mode: this.player.mode,
+				deckPos: this.player.deckPos.clone(), deckYaw: this.player.deckYaw,
+			} : null;
 			if ( this.player.hostedSeaLevel !== null ) {
 				this.hostedQuery.setCamera( this.camera.position.x, this.camera.position.z );
 				this.hostedQuery.setPoint( this.player.slot, this.player.position.x, this.player.position.z );
@@ -1465,6 +1530,19 @@ function readVegetationPlacements( connector, component ) {
 	const bytes = connector.assets.get( component.placementAssetId );
 	if ( ! bytes ) throw new Error( `Vegetation component ${component.id} is missing its placement asset` );
 	return decodeVegetationPlacements( bytes, component.seed );
+}
+
+function boatTriangleCount( root ) {
+	let triangles = 0;
+	root.traverse( ( object ) => {
+		const geometry = object.geometry;
+		if ( ! object.isMesh || ! geometry?.attributes?.position ) return;
+		const available = geometry.index?.count ?? geometry.attributes.position.count;
+		const start = geometry.drawRange?.start ?? 0;
+		const count = Number.isFinite( geometry.drawRange?.count ) ? geometry.drawRange.count : available - start;
+		triangles += Math.floor( Math.max( 0, Math.min( available - start, count ) ) / 3 );
+	} );
+	return triangles;
 }
 
 function componentAssetIDs( component ) {

@@ -104,6 +104,7 @@ try {
 	const boat = source.components.find( ( component ) => component.type === 'tidewater.downeast-boat/1' );
 	assert.deepEqual( boat, { id: 'tw-component:island-lobster-boat', type: 'tidewater.downeast-boat/1', objectId: 'tw-object:moored-lobster-boat', priority: 'portal-preview' }, 'portable island binds the trusted boat runtime to its signed world-local berth' );
 	assert.equal( source.rules.seaLevel, 0, 'the boat has a declared world-space sea level' );
+	assert.deepEqual( source.rules.vehiclePolicy, { enabled: true, maxSpeed: 8, maxCombinedComplexity: 100000 }, 'example island accepts transported boats with signed speed and combined-complexity limits' );
 	const ambience = source.components.find( ( component ) => component.type === 'tidewater.ambient-audio/1' );
 	assert.equal( ambience?.beds.length, 8, 'portable island exports its eight original ambient loop beds' );
 	assert.ok( ambience.beds.every( ( bed ) => firstAssets.has( bed.assetId ) && firstAssets.get( bed.assetId ).length <= 16 * 1024 * 1024 ), 'each ambience bed is bundled as a bounded content-addressed asset' );

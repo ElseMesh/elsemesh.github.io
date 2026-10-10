@@ -102,6 +102,7 @@ export class BoatController {
 		this.rpm = 0; // engine 0..1 (spools after the lever)
 		this.maxThrust = 26000; // N, bollard pull at full rpm
 		this.pitchSpeed = 16; // m/s, propeller pitch speed at full rpm (thrust -> 0 there)
+		this.maxSpeed = 16;
 		this.reverseFactor = 0.45; // astern thrust relative to ahead
 		this.driven = false;
 		this.moored = true;
@@ -412,6 +413,7 @@ export class BoatController {
 		fl.y /= m * ( 1 + this.addedMass.y * wetD );
 		fl.z /= m * ( 1 + this.addedMass.z * wetD );
 		this.velocity.addScaledVector( fl.applyQuaternion( this.quaternion ), h );
+		if ( this.maxSpeed > 0 && this.velocity.lengthSq() > this.maxSpeed * this.maxSpeed ) this.velocity.setLength( this.maxSpeed );
 		const tl = T.applyQuaternion( invQ );
 		const I = this.inertia, ai = this.addedInertia;
 		tl.set( tl.x / ( I.x * ( 1 + ai.x * wetD ) ), tl.y / ( I.y * ( 1 + ai.y * wetD ) ), tl.z / ( I.z * ( 1 + ai.z * wetD ) ) );
@@ -453,6 +455,37 @@ export class BoatController {
 		this.mooring.anchor.copy( this.homePosition );
 		this.mooring.heading = this.homeHeading;
 
+	}
+
+	setMaxSpeed( speed ) {
+		this.maxSpeed = Number.isFinite( speed ) ? Math.max( 0.5, Math.min( speed, 16 ) ) : 16;
+		if ( this.velocity.lengthSq() > this.maxSpeed * this.maxSpeed ) this.velocity.setLength( this.maxSpeed );
+	}
+
+	transferState() {
+		return {
+			position: this.position.clone(), quaternion: this.quaternion.clone(), velocity: this.velocity.clone(), angular: this.angular.clone(),
+			throttle: this.throttle, steer: this.steer, rpm: this.rpm, driven: this.driven,
+		};
+	}
+
+	acceptTransfer( state, maxSpeed ) {
+		this.position.copy( state.position );
+		this.quaternion.copy( state.quaternion ).normalize();
+		this.velocity.copy( state.velocity );
+		this.angular.copy( state.angular );
+		this.setMaxSpeed( maxSpeed );
+		this.throttle = state.throttle;
+		this.throttleTarget = state.throttle;
+		this.steer = state.steer;
+		this.rpm = state.rpm;
+		this.driven = state.driven;
+		this.moored = false;
+		this.mooring.anchor.copy( this.position );
+		this.mooring.heading = this.getYaw();
+		this.hasWater = false;
+		this._acc = 0;
+		this.apply();
 	}
 
 	getYaw() {

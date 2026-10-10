@@ -332,9 +332,35 @@ type worldRules struct {
 	AvatarComplexity uint32         `json:"avatarComplexity"`
 	PhysicsProfile   string         `json:"physicsProfile"`
 	Movement         *movementRules `json:"movement,omitempty"`
+	VehiclePolicy    *vehiclePolicy `json:"vehiclePolicy,omitempty"`
 	MaxPackageBytes  *int64         `json:"maxPackageBytes,omitempty"`
 	StyleGuide       string         `json:"styleGuide,omitempty"`
 	RequiredFeatures []string       `json:"requiredFeatures,omitempty"`
+}
+
+type vehiclePolicy struct {
+	Enabled               bool     `json:"enabled"`
+	MaxSpeed              *float64 `json:"maxSpeed,omitempty"`
+	MaxCombinedComplexity *uint32  `json:"maxCombinedComplexity,omitempty"`
+}
+
+func (policy *vehiclePolicy) UnmarshalJSON(data []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil || fields == nil {
+		return errors.New("vehicle policy must be an object")
+	}
+	for field := range fields {
+		if field != "enabled" && field != "maxSpeed" && field != "maxCombinedComplexity" {
+			return fmt.Errorf("unknown vehicle policy field %q", field)
+		}
+	}
+	type plain vehiclePolicy
+	var decoded plain
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*policy = vehiclePolicy(decoded)
+	return nil
 }
 
 type movementRules struct {
@@ -447,6 +473,14 @@ func validateManifest(manifest worldManifest, localPeerID string, now time.Time)
 	if movement := manifest.Rules.Movement; movement != nil {
 		if math.IsNaN(movement.WalkSpeed) || math.IsInf(movement.WalkSpeed, 0) || movement.WalkSpeed < 0.5 || movement.WalkSpeed > 10 || math.IsNaN(movement.SprintSpeed) || math.IsInf(movement.SprintSpeed, 0) || movement.SprintSpeed < movement.WalkSpeed || movement.SprintSpeed > 15 || math.IsNaN(movement.JumpSpeed) || math.IsInf(movement.JumpSpeed, 0) || movement.JumpSpeed < 0 || movement.JumpSpeed > 10 {
 			return errors.New("world movement speeds are outside the supported range")
+		}
+	}
+	if policy := manifest.Rules.VehiclePolicy; policy != nil {
+		if !policy.Enabled && (policy.MaxSpeed != nil || policy.MaxCombinedComplexity != nil) {
+			return errors.New("disabled vehicle policy cannot declare limits")
+		}
+		if policy.Enabled && (policy.MaxSpeed == nil || *policy.MaxSpeed < 0.5 || *policy.MaxSpeed > 16 || math.IsNaN(*policy.MaxSpeed) || math.IsInf(*policy.MaxSpeed, 0) || policy.MaxCombinedComplexity == nil || *policy.MaxCombinedComplexity < 1 || *policy.MaxCombinedComplexity > 1000000) {
+			return errors.New("world vehicle policy limits are outside the supported range")
 		}
 	}
 	if len(manifest.Rules.RequiredFeatures) > 64 {

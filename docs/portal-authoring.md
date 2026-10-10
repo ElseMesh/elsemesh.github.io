@@ -28,6 +28,20 @@ The legacy front fields above remain the front route. Add an optional `back` obj
 
 The back can lead to another world. To use the same destination, give its exit the same position as the front exit with opposite yaw. This lets the two directions arrive facing opposite ways. Omitting `back` leaves the back unconfigured; it does not create an automatic return route. Each destination owner's complementary doorway is a separate authored record.
 
+### Vehicle entry rules
+
+The bundled Downeast boat can cross a portal only when the destination explicitly opts in and declares a compatible `tidewater.downeast-boat/1` berth. Add these destination rules:
+
+```json
+"vehiclePolicy": {
+  "enabled": true,
+  "maxSpeed": 8,
+  "maxCombinedComplexity": 100000
+}
+```
+
+`maxSpeed` caps the boat's world-space speed in meters per second after the handoff. `maxCombinedComplexity` must accommodate the destination's configured `avatarComplexity` plus the bundled boat's measured triangle count. If the policy is omitted or disabled, the destination has no compatible berth, or its complexity budget is exceeded, crossing is held at the threshold and an open-portal preview is hidden while the visitor is aboard or at the helm. The boat pose, orientation, linear and angular velocity, and helm state transfer to the destination boat; the destination speed cap applies immediately. This is client runtime enforcement; authoritative server-side vehicle simulation and anti-cheat remain part of multiplayer simulation work.
+
 ## Share one side with a friend
 
 After Alice has agreed Bob's destination frame, export a small JSON connection document:
