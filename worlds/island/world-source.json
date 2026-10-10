@@ -6131,14 +6131,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6169,14 +6175,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6207,14 +6219,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6245,14 +6263,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6283,14 +6307,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6321,14 +6351,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6359,14 +6395,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6397,14 +6439,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6435,14 +6483,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6473,14 +6527,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6511,14 +6571,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6549,14 +6615,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6587,14 +6659,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6625,14 +6703,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6663,14 +6747,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6701,14 +6791,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6739,14 +6835,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6777,14 +6879,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6815,14 +6923,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6853,14 +6967,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6891,14 +7011,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6929,14 +7055,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -6967,14 +7099,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7005,14 +7143,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7043,14 +7187,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7081,14 +7231,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7119,14 +7275,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7157,14 +7319,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7195,14 +7363,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7233,14 +7407,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7271,14 +7451,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7309,14 +7495,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7347,14 +7539,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7385,14 +7583,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7423,14 +7627,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7461,14 +7671,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7499,14 +7715,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7537,14 +7759,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7575,14 +7803,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7613,14 +7847,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7651,14 +7891,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -7689,14 +7935,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7727,14 +7979,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7765,14 +8023,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7803,14 +8067,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -7841,14 +8111,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -7879,14 +8155,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -7917,14 +8199,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -7955,14 +8243,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -7993,14 +8287,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8031,14 +8331,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8069,14 +8375,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8107,14 +8419,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8145,14 +8463,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -8183,14 +8507,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8221,14 +8551,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8259,14 +8595,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8297,14 +8639,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8335,14 +8683,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8373,14 +8727,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -8411,14 +8771,20 @@
       "kind": "asset-instance",
       "label": "dead quiver trunk",
       "assetId": "sha256:1ffb419a0a3c96c14ddf5b63676066aaa9f40189e33329dfba95fb73dab0d064",
+      "lods": [
+        {
+          "assetId": "sha256:a04c935740dd782344cce120e937d934e674426f0d1568827c21da19e0e8fa8b",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.0055491626262664795,
           0.001127876341342926,
-          -0.003372691571712494
+          0.00011915713548660278
         ],
-        "radius": 1.0085758122825876
+        "radius": 1.0089473538213487
       },
       "transform": {
         "position": [
@@ -8449,14 +8815,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8487,14 +8859,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8525,14 +8903,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8563,14 +8947,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -8601,14 +8991,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -8639,14 +9035,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8677,14 +9079,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8715,14 +9123,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -8753,14 +9167,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8791,14 +9211,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8829,14 +9255,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8867,14 +9299,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8905,14 +9343,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -8943,14 +9387,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -8981,14 +9431,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9019,14 +9475,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -9057,14 +9519,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9095,14 +9563,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9133,14 +9607,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9171,14 +9651,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -9209,14 +9695,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -9247,14 +9739,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9285,14 +9783,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9323,14 +9827,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9361,14 +9871,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9399,14 +9915,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9437,14 +9959,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9475,14 +10003,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9513,14 +10047,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9551,14 +10091,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9589,14 +10135,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9627,14 +10179,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9665,14 +10223,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9703,14 +10267,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9741,14 +10311,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9779,14 +10355,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9817,14 +10399,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9855,14 +10443,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -9893,14 +10487,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9931,14 +10531,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -9969,14 +10575,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10007,14 +10619,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10045,14 +10663,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10083,14 +10707,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10121,14 +10751,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10159,14 +10795,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10197,14 +10839,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10235,14 +10883,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -10273,14 +10927,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -10311,14 +10971,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10349,14 +11015,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -10387,14 +11059,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10425,14 +11103,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10463,14 +11147,20 @@
       "kind": "asset-instance",
       "label": "lambis shell",
       "assetId": "sha256:0ee07523352578110d78347d93a4536673f67c2d01a0aee6b334882bad80b717",
+      "lods": [
+        {
+          "assetId": "sha256:6348fabfc00e8ae4efb50b1b2987567bb116e0bf05b63402c187a3e2236ac056",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          -0.00027358531951904297,
-          0.0004056934267282486,
+          -0.00022569671273231506,
+          0.00015432760119438171,
           -0.0008742678910493851
         ],
-        "radius": 0.06949115089184454
+        "radius": 0.0695551488291986
       },
       "transform": {
         "position": [
@@ -10501,14 +11191,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10539,14 +11235,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10577,14 +11279,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10615,14 +11323,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10653,14 +11367,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10691,14 +11411,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10729,14 +11455,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10767,14 +11499,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10805,14 +11543,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10843,14 +11587,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10881,14 +11631,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -10919,14 +11675,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10957,14 +11719,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -10995,14 +11763,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -11033,14 +11807,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11071,14 +11851,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11109,14 +11895,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -11147,14 +11939,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -11185,14 +11983,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -11223,14 +12027,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11261,14 +12071,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11299,14 +12115,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11337,14 +12159,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [
@@ -11375,14 +12203,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11413,14 +12247,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 01",
       "assetId": "sha256:4db3e1d2ecf5f50361c0662f9e5555f97a63e56c0ec76881c8d6d489aee8377b",
+      "lods": [
+        {
+          "assetId": "sha256:4e1e116e64fb845aa97c061fe50f37fe4c31e2c206dfd450cebe70ffd9e72d6a",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
-          0.0010482072830200195,
+          0.0006632059812545776,
           -0.0003624856472015381,
           0.0012410134077072144
         ],
-        "radius": 0.23730011386285646
+        "radius": 0.23764400906417923
       },
       "transform": {
         "position": [
@@ -11451,14 +12291,20 @@
       "kind": "asset-instance",
       "label": "dead quiver branch 02",
       "assetId": "sha256:7fe1ca8005be099418080eadb889ce11e921b012bb1cbbd50d1c0fe312372382",
+      "lods": [
+        {
+          "assetId": "sha256:15c7505081368abf3f31c29810562c1078ec5155b1aacf5f086ae30e42c42f85",
+          "maxScreenFraction": 0.45
+        }
+      ],
       "priority": "visible",
       "streamingBounds": {
         "center": [
           0.00015822052955627441,
-          -0.0005240514874458313,
+          -0.0004667937755584717,
           -0.0007491596043109894
         ],
-        "radius": 0.2956030574950289
+        "radius": 0.2956307051250062
       },
       "transform": {
         "position": [

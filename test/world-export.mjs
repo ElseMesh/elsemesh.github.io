@@ -203,13 +203,29 @@ try {
 	assert.ok( scannedObjects.every( ( object ) => Array.isArray( object.transform.rotation ) && Math.abs( Math.hypot( ...object.transform.rotation ) - 1 ) < 1e-4 && object.collision.enabled === false ), 'scanned objects carry normalized collision-free rotations' );
 	const scannedAssetIDs = new Set( scannedObjects.map( ( object ) => object.assetId ) );
 	assert.equal( scannedAssetIDs.size, 4, 'all four scanned debris assets are included once each' );
+	const scannedLODAssetIDs = new Set( scannedObjects.map( ( object ) => object.lods?.[ 0 ]?.assetId ) );
+	assert.equal( scannedLODAssetIDs.size, 4, 'each scanned debris type shares one authored distance mesh across its placements' );
 	for ( const id of scannedAssetIDs ) {
 		const bytes = firstAssets.get( id );
 		const parsed = parseGLB( bytes );
-		assert.equal( parsed.meshes.length, 1, 'scanned asset export keeps a single LOD mesh' );
+		assert.equal( parsed.meshes.length, 1, 'scanned base asset contains only its near-detail mesh' );
 		assert.ok( parsed.materials[ 0 ]?.pbrMetallicRoughness?.baseColorTexture, 'scanned asset has a base-color texture' );
 		assert.equal( parsed.images[ 0 ]?.mimeType, 'image/jpeg', 'scanned albedo is embedded in the GLB' );
 		assert.ok( parsed.images[ 0 ]?.bytes?.length > 0, 'scanned GLB contains embedded image bytes' );
+		const instance = scannedObjects.find( object => object.assetId === id );
+		assert.equal( instance.lods[ 0 ].maxScreenFraction, 0.45, 'scanned debris selects its authored distance mesh by projected size' );
+		assert.ok( scannedObjects.filter( object => object.assetId === id ).every( object => object.lods[ 0 ].assetId === instance.lods[ 0 ].assetId ), 'instances of one scanned asset share the same LOD hash' );
+		const lodBytes = firstAssets.get( instance.lods[ 0 ].assetId );
+		const lod = parseGLB( lodBytes );
+		assert.ok( triangleCount( lod ) < triangleCount( parsed ) * 0.3, 'the authored scanned mesh removes at least 70% of its near-detail triangles' );
+		assert.deepEqual( lod.images[ 0 ]?.bytes, parsed.images[ 0 ]?.bytes, 'scanned distance mesh reuses the exact authored albedo bytes' );
+		assert.ok( lod.meshes.flat().every( primitive => primitive.attributes.TEXCOORD_0 && primitive.attributes.NORMAL ), 'scanned distance mesh keeps textured, lit geometry' );
+		assert.ok( lod.meshes.flat().every( primitive => Number.isInteger( primitive.material ) ), 'scanned distance mesh retains material assignments' );
+		assert.ok( lod.meshes.flat().every( primitive => {
+			const positions = primitive.attributes.POSITION.array, center = instance.streamingBounds.center, radius = instance.streamingBounds.radius;
+			for ( let i = 0; i < positions.length; i += 3 ) if ( Math.hypot( positions[ i ] - center[ 0 ], positions[ i + 1 ] - center[ 1 ], positions[ i + 2 ] - center[ 2 ] ) > radius + 0.001 ) return false;
+			return true;
+		} ), 'streaming bounds contain the full and distance meshes' );
 	}
 	const payload = assetBytes;
 	const connector = { worldId: source.worldId, manifest: { assets: [ { id: source.objects[ 0 ].assetId, priority: 'visible' } ], objects: source.objects } };

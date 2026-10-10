@@ -107,9 +107,12 @@ in the station view, so it was rejected. The checked-in 0.70-ratio result was
 visually compared against the full mesh from the same 640 by 360 Blender
 camera at `(-230, 7, 30)` looking toward `(-220, 5, 8)`; its station-view SSIM
 was 0.9905. This is an offline geometry check, not browser or Flip7 validation.
-The comparison is included below.
-The full cave GLB remains the collision and close-view source. Small repeated
-debris assets remain unvaried. Near/far image comparisons and the Flip7 check
+The comparison is included below. The full cave GLB remains the collision and
+close-view source. The 141 scanned debris placements across four source models
+now use the source GLBs' authored third mesh as their shared far LOD. It reduces
+each model from 700 to 160 triangles, 500 to 119, 500 to 119, and 299 to 80,
+while retaining the exact same embedded albedo bytes, UV channel, and normals.
+The base and far-level bounds are combined for screen-size selection. Near/far image comparisons and the Flip7 check
 remain open; mesh structure and the runtime selector alone do not prove
 distant visual quality.
 

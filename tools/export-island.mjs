@@ -140,15 +140,24 @@ for ( const tile of reefTiles ) {
 }
 if ( reefComponents.length + 4 > 128 ) throw new Error( 'Island world exceeds the 128 component limit after adding reef tiles, the boat, and ambient audio' );
 const debrisAssetIDs = new Map();
+const debrisLODAssetIDs = new Map();
 const debrisAssetBounds = new Map();
 for ( const assetName of SCAN_ASSETS ) {
 	const originalGLB = await readFile( path.join( REPO, 'public', 'models', 'debris', `${assetName}.glb` ) );
 	const albedo = await readFile( path.join( REPO, 'public', 'models', 'debris', `${assetName}_albedo.jpg` ) );
-	const packagedGLB = exportScannedLOD( originalGLB, albedo, assetName );
+	const packagedGLB = exportScannedLOD( originalGLB, albedo, assetName, 1 );
+	const packagedLODGLB = exportScannedLOD( originalGLB, albedo, assetName, 2 );
 	const packagedID = `sha256:${createHash( 'sha256' ).update( packagedGLB ).digest( 'hex' )}`;
+	const packagedLODID = `sha256:${createHash( 'sha256' ).update( packagedLODGLB ).digest( 'hex' )}`;
+	const packagedData = parseGLB( packagedGLB.buffer.slice( packagedGLB.byteOffset, packagedGLB.byteOffset + packagedGLB.byteLength ) );
+	const packagedLODData = parseGLB( packagedLODGLB.buffer.slice( packagedLODGLB.byteOffset, packagedLODGLB.byteOffset + packagedLODGLB.byteLength ) );
+	if ( triangleCount( packagedLODData ) >= triangleCount( packagedData ) * 0.3 ) throw new Error( `Scanned asset ${assetName} distance LOD must reduce triangles by at least 70%` );
+	if ( ! packagedLODData.images[ 0 ]?.bytes || ! packagedData.images[ 0 ]?.bytes || ! Buffer.from( packagedLODData.images[ 0 ].bytes ).equals( Buffer.from( packagedData.images[ 0 ].bytes ) ) ) throw new Error( `Scanned asset ${assetName} distance LOD must preserve its albedo bytes` );
 	debrisAssetIDs.set( assetName, packagedID );
-	debrisAssetBounds.set( assetName, boundsForGLB( packagedGLB ) );
+	debrisLODAssetIDs.set( assetName, packagedLODID );
+	debrisAssetBounds.set( assetName, boundsForGLB( packagedGLB, packagedLODGLB ) );
 	staticAssets.set( packagedID, packagedGLB );
+	staticAssets.set( packagedLODID, packagedLODGLB );
 }
 const ambientBeds = [];
 const ambientBedSpecs = [
@@ -251,6 +260,7 @@ const source = {
 			kind: 'asset-instance',
 			label: assetName.replaceAll( '_', ' ' ),
 			assetId: debrisAssetIDs.get( assetName ),
+			lods: [ { assetId: debrisLODAssetIDs.get( assetName ), maxScreenFraction: 0.45 } ],
 			priority: 'visible',
 			streamingBounds: debrisAssetBounds.get( assetName ),
 			transform: { position: [ instance.x, instance.y, instance.z ], yaw: instance.yaw, rotation },
@@ -450,10 +460,10 @@ function exportBatchGLB( batches, sceneName, villageMaterials = false ) {
 	return Buffer.concat( [ header, jsonHeader, jsonPadded, binHeader, binPadded ] );
 }
 
-function exportScannedLOD( sourceBytes, albedoBytes, name ) {
+function exportScannedLOD( sourceBytes, albedoBytes, name, meshIndex ) {
 	const parsed = parseGLB( sourceBytes.buffer.slice( sourceBytes.byteOffset, sourceBytes.byteOffset + sourceBytes.byteLength ) );
-	const primitive = parsed.meshes[ 1 ]?.[ 0 ];
-	if ( ! primitive?.attributes?.POSITION || ! primitive.attributes.NORMAL || ! primitive.attributes.TEXCOORD_0 || ! primitive.indices ) throw new Error( `Scanned asset ${name} has no supported LOD1 triangle mesh` );
+	const primitive = parsed.meshes[ meshIndex ]?.[ 0 ];
+	if ( ! primitive?.attributes?.POSITION || ! primitive.attributes.NORMAL || ! primitive.attributes.TEXCOORD_0 || ! primitive.indices ) throw new Error( `Scanned asset ${name} has no supported LOD${meshIndex} triangle mesh` );
 	const chunks = [];
 	const bufferViews = [];
 	const accessors = [];
@@ -514,11 +524,11 @@ function exportScannedLOD( sourceBytes, albedoBytes, name ) {
 	return Buffer.concat( [ header, jsonHeader, jsonPadded, binHeader, binPadded ] );
 }
 
-function boundsForGLB( bytes ) {
-	const parsed = parseGLB( bytes.buffer.slice( bytes.byteOffset, bytes.byteOffset + bytes.byteLength ) );
+function boundsForGLB( ...assets ) {
 	const min = [ Infinity, Infinity, Infinity ], max = [ - Infinity, - Infinity, - Infinity ];
 	let found = false;
-	for ( const primitive of parsed.meshes.flat() ) {
+	const parsedAssets = assets.map( bytes => parseGLB( bytes.buffer.slice( bytes.byteOffset, bytes.byteOffset + bytes.byteLength ) ) );
+	for ( const parsed of parsedAssets ) for ( const primitive of parsed.meshes.flat() ) {
 		const positions = primitive.attributes?.POSITION?.array;
 		if ( ! positions?.length ) continue;
 		found = true;
@@ -530,7 +540,7 @@ function boundsForGLB( bytes ) {
 	if ( ! found ) throw new Error( 'Exported asset has no positions for streaming bounds' );
 	const center = min.map( ( value, axis ) => ( value + max[ axis ] ) * 0.5 );
 	let radiusSq = 0;
-	for ( const primitive of parsed.meshes.flat() ) {
+	for ( const parsed of parsedAssets ) for ( const primitive of parsed.meshes.flat() ) {
 		const positions = primitive.attributes?.POSITION?.array;
 		if ( ! positions ) continue;
 		for ( let index = 0; index < positions.length; index += 3 ) radiusSq = Math.max( radiusSq, ( positions[ index ] - center[ 0 ] ) ** 2 + ( positions[ index + 1 ] - center[ 1 ] ) ** 2 + ( positions[ index + 2 ] - center[ 2 ] ) ** 2 );
