@@ -6,7 +6,33 @@ This document tracks the agreed ElseMesh direction against the current code. It 
 
 Graphics comparisons can use the named and captured camera URL parameters documented in [graphics-review.md](graphics-review.md), so a view and time of day can be reproduced after a normal page load without changing the phone or browser environment.
 
-## Latest verification note (2026-10-10)
+## Latest verification note (later 2026-10-10)
+
+The Flip7 is reachable over SSH and ADB again. To avoid disturbing either
+physical screen, Chrome was opened on scrcpy's isolated virtual display only:
+Android logical display 29, 720×1600, SurfaceFlinger ID
+`11529215050196523144`. The deployed ElseMesh root loaded to the playable
+island; its HUD showed 29 FPS and the bottom-right stamp `e9399014`, matching
+repository HEAD `e939901`. The pier, beach, ocean, touch controls, and HUD were
+visible, with no white-texture failure in this start view. This is a renderer
+smoke check, not a matched-view or full-content comparison. The same-size
+The original Tidewater page initially showed shader compilation at 38%; after
+it finished loading, it reached the playable pier start view on the same
+720×1600 virtual display. A first visual review found broadly similar pier,
+beach, and ocean materials and no white-texture failure. The current HUD showed
+29 FPS; the original showed 23 FPS. Camera pose, time, exposure, and render
+settings were not captured precisely enough for a controlled parity result.
+The [current view](images/flip7-virtual-current-2026-10-10.png) and [original
+playable view](images/flip7-virtual-baseline-playable-2026-10-10.png) are
+retained for review.
+
+The disposable current-build Android `thruholdd` also reports `status: ok` and
+advertises ZeroTier IPv4 `172.22.16.207/16` plus 6PLANE
+`fc60:bbbd:e23c:f872:276f::1`; its health endpoint reports `dhtPeers: 0`. This
+does not verify a peer connection. See the current retry details in
+[`zerotier-worldd.md`](zerotier-worldd.md).
+
+### Earlier 2026-10-10 build note (device availability later superseded)
 
 Flip7 is offline until further notice; do not attempt SSH or ADB validation until it is available again. From source revision `3742e45afa3da1a8ea83e660a329a792954bd80a`, the Android arm64 `thruholdd` and bundled `libzt.so` were rebuilt in the external build tree with NDK r29/API 26. `file` and `llvm-readelf` confirmed Android AArch64 artifacts, Android system-library dependencies, and the `$ORIGIN` library runpath; the binary contains the expected source revision. `go test -tags zerotier ./worldd` passed from the external Linux build tree with its libzt include/library paths configured. These are compile/test results only: no phone execution, ZeroTier join, renderer, or visual check was possible. GitHub Pages deployment for this revision completed successfully.
 

@@ -35,3 +35,26 @@ The Example Island package now includes the GPU-baked village PBR maps in its ow
 ## WebGL fallback check, 2026-10-10
 
 The hosted page initially reported `WebGL fallback failed (Cannot read properties of undefined (reading 'WebGLRenderer'))` after WebGPU adapter creation failed. `three@0.180` exposes `WebGLRenderer` as a named ESM export, not a default export. Commit `58f253c` changed the lazy import to use the module namespace and added a regression check. The Pages workflow succeeded, and the live page showed build stamp `58f253c8`; its fallback error changed to `WebGL fallback failed (Error creating WebGL context.)`. That confirms the module import defect is fixed and the renderer constructor was reached. This Chrome session has neither a usable WebGPU adapter nor a usable WebGL context, so it still cannot verify scene rendering. No game click or pointer-lock request was used. The separate `npm run test:webgl-backend` check and production build pass.
+
+## Flip7 virtual-display smoke check, 2026-10-10
+
+The deployed `https://elsemesh.github.io/` page was opened in Chrome on the
+scrcpy virtual display only (logical display 29, 720×1600; SurfaceFlinger ID
+`11529215050196523144`). The start page advanced into the playable island after
+a tap explicitly sent to display 29. The resulting view showed the pier, beach,
+ocean, HUD, touch controls, and commit badge `e9399014`; the HUD reported
+29 FPS. No white-texture failure appeared in that view. This verifies a
+single start-area renderer smoke check on the phone. It does not verify the
+mountain, trail, village, seabed, boat, LOD transitions, or visual parity.
+
+The original `https://dgreenheck.github.io/tidewater/` page was opened on the
+same virtual display and viewport. It initially showed shader compilation at
+38%; after loading, it reached its playable pier start view. The two views
+show broadly similar pier, beach, and ocean materials, with no white-texture
+failure in the ElseMesh view. The current HUD read 29 FPS and the original read
+23 FPS at capture time. This is an approximate start-view comparison only:
+camera pose, time, exposure, and render settings were not captured precisely
+enough to call it a controlled match or sign off on visual parity. The retained
+captures show the [current playable scene](images/flip7-virtual-current-2026-10-10.png)
+and the [original playable scene](images/flip7-virtual-baseline-playable-2026-10-10.png).
+Neither physical Flip7 display was targeted.

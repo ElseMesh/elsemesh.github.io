@@ -498,6 +498,24 @@ because the Central policy does not allow that port. This does not validate
 separate hosts, distinct NATs, or internet relay behavior. Both daemon
 processes were stopped and their temporary state removed.
 
+### Later Flip7 runtime retry (2026-10-10)
+
+A current Android arm64 `thruholdd` and matching `libzt.so` were run from a
+separate Termux temporary directory, leaving the installed daemon and its
+persistent identity untouched. The node record reports PeerID
+`12D3KooWEjt3MG2M9CCSjHirJtEUNZrgoNLqH15XG8AL1DbmDBdg`, IPv4
+`172.22.16.207/16`, and 6PLANE `fc60:bbbd:e23c:f872:276f::1` on TCP port
+`42902`. Its local `/healthz` returned `status: ok`, but `dhtPeers` remained
+zero while it attempted to bootstrap to a temporary Linux node. Thus the daemon
+joined the network and advertised both address families, but this retry did
+not prove cross-device peer connectivity. The host's ordinary ZeroTier client
+is on a different overlay and has no route to this 6PLANE address; peer testing
+must use the daemon's embedded libzt path on both sides. The Linux test process
+did not expose a reachable local HTTP listener during this retry, so its
+startup/listener state must be resolved before attributing the zero-peer result
+to Central policy, host firewall, or NAT behavior. The phone's TCP ADB
+connection was available, but it did not change this network result.
+
 The remaining tests are:
 
 1. Restore Flip7 connectivity to the host, diagnose the post-policy TCP dial,
