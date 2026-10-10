@@ -122,6 +122,7 @@ func run() error {
 	worldName := flag.String("world-name", "My ThruHold", "create a local starter world when none is supplied")
 	listenPort := flag.Int("p2p-port", 42901, "libp2p TCP and QUIC listen port")
 	zeroTierNetwork := flag.String("zerotier-network", defaultZeroTierNetworkID, "ZeroTier network ID to join through libzt (requires a zerotier build)")
+	zeroTierPathDiagnostics := flag.Bool("zerotier-path-diagnostics", false, "enable a loopback-only endpoint for querying observed ZeroTier peer IP/UDP-port paths")
 	httpAddress := flag.String("http", "127.0.0.1:5200", "HTTP/WebSocket gateway listen address; place behind TLS for public browser access")
 	webTransportAddress := flag.String("webtransport", "", "optional WebTransport HTTP/3 UDP listen address, for example :5201")
 	webTransportCert := flag.String("webtransport-tls-cert", "", "TLS certificate for the optional WebTransport listener")
@@ -168,6 +169,9 @@ func run() error {
 	}
 	if operationCount > 1 || (*publishManifestPath != "" && !publishOperation) || ((*baseSourcePath != "" || *candidateSourcePath != "") && *publishManifestPath == "") || (*inspectManifest && *manifestPath == "") || (*manifestOut != "" && *signManifestPath == "") || (*roleDocumentOut != "" && *signRoleGrantPath == "" && *signRoleRevocationsPath == "") || ((*signRoleGrantPath != "" || *signRoleRevocationsPath != "") && *roleDocumentOut == "") || (*signRoleGrantPath != "" && *signRoleRevocationsPath != "") || (*proposalOut != "" && *exportProposalID == "") || (*exportProposalID != "" && (*proposalOut == "" || *manifestPath == "")) || ((*listProposals || *removeProposalID != "") && *manifestPath == "") {
 		return errors.New("choose one one-shot operation; publish, signing, and proposal export flags require their matching inputs")
+	}
+	if *zeroTierPathDiagnostics && operationCount > 0 {
+		return errors.New("zerotier-path-diagnostics cannot be combined with one-shot operations")
 	}
 	if *listWorldProfiles {
 		if *worldProfile != "" {
@@ -223,6 +227,14 @@ func run() error {
 	}
 	if *directoryURL != "" && (!validDirectoryURL(*directoryURL) || *publicGateway == "") {
 		return errors.New("directory-url requires an HTTPS service origin and --public-gateway")
+	}
+	if *zeroTierPathDiagnostics {
+		if *zeroTierNetwork == "" {
+			return errors.New("zerotier-path-diagnostics requires embedded ZeroTier")
+		}
+		if !isLoopbackListenAddress(*httpAddress) {
+			return errors.New("zerotier-path-diagnostics requires --http to bind to a loopback IP address")
+		}
 	}
 	allowedBrowserOrigins, err := parseAllowedBrowserOrigins(allowedBrowserOriginsFlags)
 	if err != nil {
@@ -564,6 +576,13 @@ func run() error {
 	mux.HandleFunc("/api/assets/", d.handleAsset)
 	mux.HandleFunc("/gateway", d.handleBrowserGateway)
 	mux.HandleFunc("/browser-host", d.handleBrowserHost)
+	if *zeroTierPathDiagnostics {
+		pathQuerier, ok := zeroTier.(zeroTierPathQuerier)
+		if !ok {
+			return errors.New("ZeroTier path diagnostics are unavailable in this build")
+		}
+		mux.HandleFunc("/debug/zerotier/paths", zeroTierPathHandler(pathQuerier))
+	}
 	var wtServer *webtransport.Server
 	if *webTransportAddress != "" {
 		wtServer = &webtransport.Server{H3: http3.Server{Addr: *webTransportAddress, Handler: securityHeaders(mux)}}

@@ -216,6 +216,37 @@ packet demultiplexing (or its own socket/mapping); it must keep the managed
 overlay as fallback. Do not treat a path query result as a routable stable
 address or permission to bypass overlay identity and world authorization.
 
+For an opt-in local diagnostic, start `thruholdd` with
+`--zerotier-path-diagnostics`; keep its `--http` listener bound to a numeric
+loopback address such as the default `127.0.0.1:5200`. Then query a known
+10-digit ZeroTier peer ID:
+
+```sh
+curl 'http://127.0.0.1:5200/debug/zerotier/paths?peerId=0123456789'
+```
+
+The endpoint returns the currently observed physical `IP/UDP-port` paths, or
+an empty list when the peer is known but has no active path. The endpoint is
+disabled by default; startup rejects it if the HTTP listener is not bound to a
+loopback IP. Requests also must arrive from loopback without proxy-forwarding
+headers and use a loopback Host value. Do not add this diagnostic path to a
+public reverse-proxy allowlist: physical endpoint addresses are sensitive and
+ephemeral. This query observes ZeroTier's path only; it does not switch traffic
+to a different protocol.
+
+On 2026-10-11, focused handler tests passed in both ordinary and `zerotier`
+builds, and Linux amd64 plus Android arm64 diagnostic binaries were built.
+The runtime endpoint was exercised against a live peer on both platforms. The
+Linux response contained duplicate RFC1918/local candidates; it did not reveal
+a public endpoint. On Flip7, the connected Linux peer was visible
+(`dhtPeers:1`), but the physical-path query returned an empty list. Thus the
+query API works, while the presence of an active managed-overlay peer does not
+guarantee a reported or reusable physical path. Public Host and forwarded
+requests were rejected. These tests did not establish independent-NAT
+connectivity or direct-transport viability. Temporary daemons, profiles, and
+ADB forwards were removed after the check; existing Flip7 daemons and display
+state were left alone.
+
 The embedded node identity is persisted in
 `$XDG_CONFIG_HOME/elsemesh/zerotier/identity.public` and
 `identity.secret` (normally `~/.config/elsemesh/zerotier/` on Linux). This

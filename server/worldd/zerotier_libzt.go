@@ -192,6 +192,33 @@ func (z *libztRuntime) Addresses() []net.IP {
 }
 func (z *libztRuntime) NodeID() string { return fmt.Sprintf("%010x", z.nodeID) }
 
+func (z *libztRuntime) PhysicalPeerPaths(peerID uint64) ([]string, error) {
+	if peerID == 0 || peerID > (1<<40)-1 {
+		return nil, errors.New("invalid ZeroTier peer ID")
+	}
+	if code := int(C.zts_core_lock_obtain()); code != 0 {
+		return nil, fmt.Errorf("lock libzt core for path query failed (%d)", code)
+	}
+	defer C.zts_core_lock_release()
+
+	count := int(C.zts_core_query_path_count(C.uint64_t(peerID)))
+	if count < 0 {
+		if count == int(C.ZTS_ERR_NO_RESULT) {
+			return nil, errZeroTierPeerNotFound
+		}
+		return nil, fmt.Errorf("query ZeroTier peer path count failed (%d)", count)
+	}
+	paths := make([]string, 0, count)
+	for index := 0; index < count; index++ {
+		var path [64]C.char
+		if code := int(C.zts_core_query_path(C.uint64_t(peerID), C.uint(index), &path[0], C.uint(len(path)))); code != 0 {
+			return nil, fmt.Errorf("query ZeroTier peer path %d failed (%d)", index, code)
+		}
+		paths = append(paths, C.GoString(&path[0]))
+	}
+	return paths, nil
+}
+
 func (z *libztRuntime) Libp2pOptions() []libp2p.Option {
 	dialer := tcp.WithDialerForAddr(func(address ma.Multiaddr) (tcp.ContextDialer, error) {
 		if ipText, err := address.ValueForProtocol(ma.P_IP4); err == nil {
