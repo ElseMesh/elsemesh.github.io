@@ -210,6 +210,11 @@ when neither `--data` nor `--world-profile` is selected, an existing
 ZeroTier identity is moved to the device-wide directory first. If both old and
 new world data directories contain files, the daemon stops and leaves both
 untouched; choose a data directory explicitly or merge the contents manually.
+A 2026-10-10 isolated CLI check ran `--print-node-id` with a temporary
+`XDG_CONFIG_HOME`: it moved the legacy world key and data directory, moved the
+legacy ZeroTier state directory, and returned the same world PeerID before
+and after migration. This one-shot check did not start libzt or join the
+network; ZeroTier key reuse is separately covered by the identity tests.
 Back up the complete `zerotier` directory and restore it with the daemon on a
 new installation. Run one libzt-enabled `thruholdd` process per OS user at a
 time because they share this device identity and libzt state. A separate
