@@ -51,9 +51,10 @@ The gateway limits a daemon to 128 active browser-host sessions, four hosts
 per world, 32 pending requests per host and 192 KiB per asset chunk. Host
 registration has a 15-second deadline, requests have a 20-second deadline,
 and a host with no heartbeat for 45 seconds is removed. A same-owner
-re-registration replaces that owner's session. Browser-host presence messages,
-deployed public gateway operation and WebRTC are not implemented; the current
-gateway relay supports signed manifest and asset retrieval only.
+re-registration replaces that owner's session. Browser-host presence messages
+and deployed public gateway operation are not implemented; this reverse-host
+relay still supports signed manifest and asset retrieval only. Direct WebRTC is
+implemented for standalone `worldd` owners, not browser-hosted owner workers.
 
 ## Browser-host workflow and limits
 
@@ -89,12 +90,13 @@ themselves provide a network route through NAT.
 
 ## Direct peer transport
 
-Direct WebRTC is not implemented in the current client. The signaling,
-authentication, ICE, request framing, and gateway fallback contract is recorded
-in [browser-direct-webrtc.md](browser-direct-webrtc.md). Do not describe
-browser-to-world direct WebRTC as supported until browser-engine tests prove
-that complete path. The gateway-forwarded WebTransport/WebSocket path remains
-the current compatibility path.
+The client can signal a standalone `worldd` through the selected gateway and
+use a direct data channel for manifest, asset, and role-state reads. Loopback
+headless Chromium verifies the direct signed-manifest and hash-checked asset
+path plus fallback after channel closure. Cross-NAT and public reachability
+remain unverified. Browser-hosted owner workers still serve through their
+reverse gateway session. See [direct WebRTC](browser-direct-webrtc.md) for the
+protocol, STUN and UDP port configuration, limits, and remaining verification.
 
 ## Security and lifecycle requirements
 
@@ -122,8 +124,9 @@ online only while its tab is connected, and that a second browser can fetch and
 verify the signed manifest and assets through the gateway. Check malformed and
 replayed owner proofs, expired sessions, cross-world requests, quotas, tab
 suspension, owner handover, and reconnect behavior. Repeat with a ThruHold portal
-and with gateway failure. Test direct WebRTC separately only after its signaling
-and relay paths exist. Public hosting claims require tests against a deployed
+and with gateway failure. The standalone daemon WebRTC path now has a headless
+Chromium integration test; that does not exercise direct access to a
+browser-hosted owner. Public hosting claims require tests against a deployed
 HTTPS/WSS gateway from a network outside the developer machine.
 For a community-operated TLS gateway and relay deployment example, see
 [`relay-deployment.md`](relay-deployment.md#publish-a-browser-gateway-with-tls).

@@ -82,6 +82,11 @@ export class WorldConnector {
 		this.webTransportFailed = false;
 		this.socketPromise = null;
 		this.pending = new Map();
+		this.rtcPending = new Map();
+		this.rtcPeerConnection = null;
+		this.rtcChannel = null;
+		this.rtcAttempted = false;
+		this.iceServers = [];
 	}
 
 	async getManifest( { signal, excludeProviders = this.unavailableProviders } = {} ) {
@@ -343,11 +348,30 @@ export class WorldConnector {
 
 	async #connection( signal ) {
 		throwIfAborted( signal );
+		if ( this.rtcChannel?.readyState === 'open' ) return { kind: 'webrtc', channel: this.rtcChannel };
 		if ( this.webTransport?.state === 'connected' ) return { kind: 'webtransport', session: this.webTransport };
-		if ( this.socket?.readyState === WebSocket.OPEN ) return { kind: 'websocket', socket: this.socket };
 		if ( this.socketPromise ) return waitWithAbort( this.socketPromise, signal );
+		if ( this.socket?.readyState === WebSocket.OPEN ) {
+			if ( ! this.rtcAttempted && typeof globalThis.RTCPeerConnection === 'function' ) {
+				try { await this.#openRTC( this.socket, signal ); }
+				catch ( error ) { if ( signal?.aborted ) throw signal.reason || error; }
+			}
+			if ( this.rtcChannel?.readyState === 'open' ) return { kind: 'webrtc', channel: this.rtcChannel };
+			return { kind: 'websocket', socket: this.socket };
+		}
 		const promise = ( async () => {
 			const base = this.#httpBaseURL();
+			let socket = null;
+			if ( typeof globalThis.RTCPeerConnection === 'function' ) {
+				socket = await this.#openWebSocket( base, signal );
+				try {
+					await this.#openRTC( socket, signal );
+					return { kind: 'webrtc', channel: this.rtcChannel };
+				} catch ( error ) {
+					if ( signal?.aborted ) throw signal.reason || error;
+					console.info( 'Direct WebRTC unavailable; trying the world gateway.', error );
+				}
+			}
 			if ( ! this.webTransportFailed && base.protocol === 'https:' && typeof globalThis.WebTransport === 'function' ) {
 				try { return await this.#openWebTransport( base, signal ); }
 				catch ( error ) {
@@ -358,7 +382,7 @@ export class WorldConnector {
 					console.info( 'WebTransport unavailable; using the WebSocket gateway.', error );
 				}
 			}
-			return { kind: 'websocket', socket: await this.#openWebSocket( base, signal ) };
+			return { kind: 'websocket', socket: socket || await this.#openWebSocket( base, signal ) };
 		} )();
 		this.socketPromise = promise;
 		try { return await promise; }
@@ -419,6 +443,7 @@ export class WorldConnector {
 				try { response = JSON.parse( event.data ); } catch { failConnect( new Error( 'Invalid response from world gateway' ) ); return; }
 				if ( ! connected ) {
 					if ( response.type !== 'connected' || response.worldId !== this.worldId ) { failConnect( new Error( response.error || 'World connection failed' ) ); return; }
+					this.iceServers = validateICEServers( response.iceServers );
 					connected = true;
 					settled = true;
 					cleanup();
@@ -477,24 +502,109 @@ export class WorldConnector {
 				throwIfAborted( signal );
 			}
 		}
+		if ( connection.kind === 'webrtc' ) {
+			try { return await this.#requestRTC( connection.channel, { ...message, requestId }, signal ); }
+			catch ( error ) {
+				if ( signal?.aborted || ! [ 'manifest.get', 'role-revocations.get', 'asset.get' ].includes( message.type ) || this.rtcChannel?.readyState === 'open' ) throw error;
+				connection = await this.#connection( signal );
+				if ( connection.kind === 'webrtc' ) throw error;
+				if ( connection.kind === 'webtransport' ) return requestWebTransport( connection.session, { ...message, requestId }, signal );
+				return this.#requestSocket( connection.socket, { ...message, requestId }, signal );
+			}
+		}
 		const socket = connection.socket;
+		return this.#requestSocket( socket, { ...message, requestId }, signal );
+	}
+
+	#requestSocket( socket, message, signal ) {
+		const requestId = message.requestId;
 		return new Promise( ( resolve, reject ) => {
 			const cleanup = () => { clearTimeout( timeout ); signal?.removeEventListener( 'abort', abort ); };
 			const timeout = setTimeout( () => { this.pending.delete( requestId ); cleanup(); reject( new Error( 'World request timed out' ) ); }, 30000 );
 			const abort = () => { clearTimeout( timeout ); this.pending.delete( requestId ); cleanup(); reject( signal.reason || new DOMException( 'Aborted', 'AbortError' ) ); };
 			this.pending.set( requestId, { resolve: ( value ) => { cleanup(); resolve( value ); }, reject: ( error ) => { cleanup(); reject( error ); }, timeout } );
 			signal?.addEventListener( 'abort', abort, { once: true } );
-			try { socket.send( JSON.stringify( { ...message, requestId } ) ); }
+			try { socket.send( JSON.stringify( message ) ); }
 			catch ( error ) { clearTimeout( timeout ); this.pending.delete( requestId ); reject( error ); }
 		} );
 	}
 
+	async #openRTC( socket, signal ) {
+		if ( this.rtcAttempted ) throw new Error( 'Direct WebRTC was already attempted for this connection' );
+		this.rtcAttempted = true;
+		throwIfAborted( signal );
+		const peer = new globalThis.RTCPeerConnection( { iceServers: this.iceServers } );
+		const channel = peer.createDataChannel( 'elsemesh-world-v1', { ordered: true } );
+		this.rtcPeerConnection = peer;
+		this.rtcChannel = channel;
+		channel.addEventListener( 'message', ( event ) => {
+			let response;
+			try { response = JSON.parse( event.data ); } catch { this.#failRTCPending( new Error( 'Invalid response from world data channel' ) ); return; }
+			const pending = this.rtcPending.get( response.requestId );
+			if ( ! pending ) return;
+			this.rtcPending.delete( response.requestId );
+			clearTimeout( pending.timeout );
+			if ( response.worldId !== this.worldId ) { pending.reject( new Error( 'World data channel response mismatch' ) ); return; }
+			if ( response.type === 'error' ) pending.reject( new Error( response.error || 'World request failed' ) );
+			else pending.resolve( response );
+		} );
+		channel.addEventListener( 'close', () => this.#closeRTC( new Error( 'Direct WebRTC data channel closed' ) ), { once: true } );
+		peer.addEventListener( 'connectionstatechange', () => {
+			if ( peer.connectionState === 'failed' || peer.connectionState === 'closed' ) this.#closeRTC( new Error( 'Direct WebRTC connection closed' ) );
+		} );
+		try {
+			const offer = await peer.createOffer();
+			await peer.setLocalDescription( offer );
+			await waitForICEGathering( peer, signal );
+			invariant( peer.localDescription?.sdp && peer.localDescription.sdp.length <= 64 * 1024, 'WebRTC offer is invalid or too large' );
+			const response = await this.#requestSocket( socket, { type: 'webrtc.offer', sdp: peer.localDescription.sdp, requestId: `webrtc-${globalThis.crypto?.randomUUID?.() || Date.now()}` }, signal );
+			invariant( response.type === 'webrtc.answer' && response.worldId === this.worldId && typeof response.sdp === 'string' && response.sdp.length <= 64 * 1024, 'World gateway returned an invalid WebRTC answer' );
+			await peer.setRemoteDescription( { type: 'answer', sdp: response.sdp } );
+			await waitForDataChannel(channel, signal);
+			return channel;
+		} catch ( error ) {
+			this.#closeRTC( error );
+			throw error;
+		}
+	}
+
+	#requestRTC( channel, message, signal ) {
+		throwIfAborted( signal );
+		if ( channel.readyState !== 'open' ) return Promise.reject( new Error( 'Direct WebRTC data channel is not open' ) );
+		const requestId = message.requestId;
+		return new Promise( ( resolve, reject ) => {
+			const cleanup = () => { clearTimeout( timeout ); signal?.removeEventListener( 'abort', abort ); };
+			const timeout = setTimeout( () => { this.rtcPending.delete( requestId ); cleanup(); reject( new Error( 'World data channel request timed out' ) ); }, 30000 );
+			const abort = () => { this.rtcPending.delete( requestId ); cleanup(); reject( signal.reason || new DOMException( 'Aborted', 'AbortError' ) ); };
+			this.rtcPending.set( requestId, { resolve: ( value ) => { cleanup(); resolve( value ); }, reject: ( error ) => { cleanup(); reject( error ); }, timeout } );
+			signal?.addEventListener( 'abort', abort, { once: true } );
+			try { channel.send( JSON.stringify( message ) ); }
+			catch ( error ) { this.rtcPending.delete( requestId ); cleanup(); reject( error ); }
+		} );
+	}
+
+	#failRTCPending( error ) {
+		for ( const pending of this.rtcPending.values() ) { clearTimeout( pending.timeout ); pending.reject( error ); }
+		this.rtcPending.clear();
+	}
+
+	#closeRTC( reason = new Error( 'Direct WebRTC connection closed' ) ) {
+		const peer = this.rtcPeerConnection;
+		this.rtcPeerConnection = null;
+		this.rtcChannel = null;
+		this.#failRTCPending( reason );
+		if ( peer && peer.connectionState !== 'closed' ) peer.close();
+	}
+
 	close() {
+		this.#closeRTC( new Error( 'World connector closed' ) );
 		this.socket?.close();
 		this.webTransport?.close();
 		this.socket = null;
 		this.webTransport = null;
 		this.webTransportFailed = false;
+		this.rtcAttempted = false;
+		this.iceServers = [];
 	}
 }
 
@@ -753,6 +863,48 @@ function withTimeout( promise, milliseconds, message, signal ) {
 		signal?.addEventListener( 'abort', abort, { once: true } );
 		Promise.resolve( promise ).then( ( value ) => { cleanup(); resolve( value ); }, ( error ) => { cleanup(); reject( error ); } );
 	} );
+}
+
+function waitForICEGathering( peer, signal ) {
+	if ( peer.iceGatheringState === 'complete' ) return Promise.resolve();
+	return waitForEvent( peer, 'icegatheringstatechange', () => peer.iceGatheringState === 'complete', 12000, 'WebRTC ICE gathering timed out', signal );
+}
+
+function waitForDataChannel( channel, signal ) {
+	if ( channel.readyState === 'open' ) return Promise.resolve();
+	return waitForEvent( channel, 'open', () => channel.readyState === 'open', 15000, 'WebRTC data channel did not open', signal );
+}
+
+function waitForEvent( target, eventName, ready, timeoutMs, timeoutMessage, signal ) {
+	if ( signal?.aborted ) return Promise.reject( signal.reason || new DOMException( 'Aborted', 'AbortError' ) );
+	return new Promise( ( resolve, reject ) => {
+		const cleanup = () => {
+			clearTimeout( timeout );
+			target.removeEventListener( eventName, changed );
+			target.removeEventListener( 'close', closed );
+			signal?.removeEventListener( 'abort', abort );
+		};
+		const finish = () => { cleanup(); resolve(); };
+		const changed = () => { if ( ready() ) finish(); };
+		const closed = () => { cleanup(); reject( new Error( 'WebRTC channel closed during setup' ) ); };
+		const abort = () => { cleanup(); reject( signal.reason || new DOMException( 'Aborted', 'AbortError' ) ); };
+		const timeout = setTimeout( () => { cleanup(); reject( new Error( timeoutMessage ) ); }, timeoutMs );
+		target.addEventListener( eventName, changed );
+		target.addEventListener( 'close', closed, { once: true } );
+		signal?.addEventListener( 'abort', abort, { once: true } );
+		changed();
+	} );
+}
+
+function validateICEServers( servers ) {
+	if ( ! Array.isArray( servers ) ) return [];
+	const result = [];
+	for ( const server of servers.slice( 0, 8 ) ) {
+		const urls = Array.isArray( server?.urls ) ? server.urls : typeof server?.urls === 'string' ? [ server.urls ] : [];
+		const valid = urls.filter( ( value ) => typeof value === 'string' && value.length <= 255 && /^(stun|stuns):[^\s]+$/i.test( value ) ).slice( 0, 8 );
+		if ( valid.length ) result.push( { urls: valid } );
+	}
+	return result;
 }
 
 function waitWithAbort( promise, signal ) {

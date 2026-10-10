@@ -7,6 +7,7 @@ require (
 	github.com/libp2p/go-libp2p v0.44.0
 	github.com/libp2p/go-libp2p-kad-dht v0.30.2
 	github.com/multiformats/go-multiaddr v0.16.0
+	github.com/pion/webrtc/v4 v4.1.2
 	github.com/quic-go/quic-go v0.55.0
 	github.com/quic-go/webtransport-go v0.9.0
 	google.golang.org/api v0.259.0
@@ -93,7 +94,6 @@ require (
 	github.com/pion/transport/v2 v2.2.10 // indirect
 	github.com/pion/transport/v3 v3.0.7 // indirect
 	github.com/pion/turn/v4 v4.0.2 // indirect
-	github.com/pion/webrtc/v4 v4.1.2 // indirect
 	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect

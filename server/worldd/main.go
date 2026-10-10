@@ -74,6 +74,11 @@ type daemon struct {
 	players               map[string]playerPresence
 	browserHostsMu        sync.RWMutex
 	browserHosts          map[string]*browserHostSession
+	webrtcSTUNServers     []string
+	webrtcUDPPortMin      uint16
+	webrtcUDPPortMax      uint16
+	webrtcMu              sync.Mutex
+	webrtcSessions        map[string]*worldRTCSession
 }
 
 func main() {
@@ -125,6 +130,9 @@ func run() error {
 	publicGateway := flag.String("public-gateway", "", "public HTTPS/WSS gateway origin included in signed node records")
 	directoryURL := flag.String("directory-url", "", "optional HTTPS ElseMesh directory service URL for publishing this discoverable node")
 	var allowedBrowserOriginsFlags stringFlags
+	var webrtcSTUNServers stringFlags
+	webrtcUDPPortMin := flag.Uint("webrtc-udp-port-min", 42950, "first local UDP port available to WebRTC ICE")
+	webrtcUDPPortMax := flag.Uint("webrtc-udp-port-max", 43049, "last local UDP port available to WebRTC ICE")
 	dhtMode := flag.String("dht-mode", "auto", "DHT mode: auto, client, or server")
 	serveRelay := flag.Bool("relay-service", false, "allow this node to provide a bounded libp2p circuit relay")
 	var bootstrap stringFlags
@@ -138,6 +146,7 @@ func run() error {
 	flag.Var(&roleStateFrom, "role-state-from", "world neighbor PeerID to sync owner-signed role revocations from (repeatable)")
 	flag.Var(&announceAddresses, "announce-address", "externally reachable IP multiaddr to advertise (repeatable; useful when Android blocks interface discovery)")
 	flag.Var(&allowedBrowserOriginsFlags, "allow-browser-origin", "allow this exact HTTP(S) browser origin to connect to the WebSocket gateway (repeatable)")
+	flag.Var(&webrtcSTUNServers, "webrtc-stun-server", "STUN server URL advertised to browsers and used by worldd for direct WebRTC (repeatable)")
 	cacheSyncInterval := flag.Duration("cache-sync-interval", 5*time.Minute, "how often to retry missing owner-authorized cached assets")
 	roleStateSyncInterval := flag.Duration("role-state-sync-interval", time.Minute, "how often to sync owner-signed role revocations")
 	flag.Parse()
@@ -483,7 +492,13 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("world manifest: %w", err)
 	}
-	d := &daemon{ctx: ctx, host: p2pHost, dht: router, discovery: routing.NewRoutingDiscovery(router), manifest: manifest, world: world, key: key, assetsDir: filepath.Join(*dataDir, "assets"), proposalDir: filepath.Join(*dataDir, "proposals"), webRoot: *webRoot, publicGateway: *publicGateway, directoryURL: *directoryURL, allowedBrowserOrigins: allowedBrowserOrigins, authorityChanged: make(chan struct{}, 1), verifiedAssets: make(map[string]assetFileStamp), roleStatePath: roleRevocationStatePath(*dataDir, world.WorldID)}
+	if err := validateSTUNServerURLs(webrtcSTUNServers); err != nil {
+		return err
+	}
+	if err := validateWebRTCPortRange(*webrtcUDPPortMin, *webrtcUDPPortMax); err != nil {
+		return err
+	}
+	d := &daemon{ctx: ctx, host: p2pHost, dht: router, discovery: routing.NewRoutingDiscovery(router), manifest: manifest, world: world, key: key, assetsDir: filepath.Join(*dataDir, "assets"), proposalDir: filepath.Join(*dataDir, "proposals"), webRoot: *webRoot, publicGateway: *publicGateway, directoryURL: *directoryURL, allowedBrowserOrigins: allowedBrowserOrigins, authorityChanged: make(chan struct{}, 1), verifiedAssets: make(map[string]assetFileStamp), roleStatePath: roleRevocationStatePath(*dataDir, world.WorldID), webrtcSTUNServers: append([]string(nil), webrtcSTUNServers...), webrtcUDPPortMin: uint16(*webrtcUDPPortMin), webrtcUDPPortMax: uint16(*webrtcUDPPortMax), webrtcSessions: make(map[string]*worldRTCSession)}
 	if err := d.loadRoleRevocations(); err != nil {
 		return fmt.Errorf("load persisted role revocations: %w", err)
 	}
@@ -1261,11 +1276,13 @@ type gatewayMessage struct {
 	PresenceSession string      `json:"presenceSession,omitempty"`
 	Pose            *playerPose `json:"pose,omitempty"`
 	presenceKey     string
+	gatewayPeerID   string
 	Type            string `json:"type"`
 	WorldID         string `json:"worldId,omitempty"`
 	AssetID         string `json:"assetId,omitempty"`
 	TargetPeerID    string `json:"targetPeerId,omitempty"`
 	RequestID       string `json:"requestId,omitempty"`
+	SDP             string `json:"sdp,omitempty"`
 	Offset          int64  `json:"offset,omitempty"`
 	Length          int64  `json:"length,omitempty"`
 }
@@ -1284,6 +1301,7 @@ type peerResponse struct {
 	Total           int64            `json:"total,omitempty"`
 	Chunk           string           `json:"chunk,omitempty"`
 	Error           string           `json:"error,omitempty"`
+	SDP             string           `json:"sdp,omitempty"`
 }
 
 func (d *daemon) handleBrowserGateway(w http.ResponseWriter, r *http.Request) {
@@ -1295,7 +1313,7 @@ func (d *daemon) handleBrowserGateway(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	conn.SetReadLimit(64 << 10)
+	conn.SetReadLimit(128 << 10)
 	_ = conn.SetReadDeadline(time.Now().Add(15 * time.Second))
 	var first gatewayMessage
 	if err := conn.ReadJSON(&first); err != nil || first.Type != "connect" || !worldIDPattern.MatchString(first.WorldID) {
@@ -1310,7 +1328,7 @@ func (d *daemon) handleBrowserGateway(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
-	if err := conn.WriteJSON(map[string]any{"type": "connected", "nodeId": d.host.ID().String(), "targetPeerId": first.TargetPeerID, "worldId": first.WorldID, "manifestProtocol": manifestProtocol}); err != nil {
+	if err := conn.WriteJSON(map[string]any{"type": "connected", "nodeId": d.host.ID().String(), "targetPeerId": first.TargetPeerID, "worldId": first.WorldID, "manifestProtocol": manifestProtocol, "iceServers": d.webrtcICEServers()}); err != nil {
 		return
 	}
 	sessionID, err := newPresenceSession()
@@ -1334,6 +1352,9 @@ func (d *daemon) handleBrowserGateway(w http.ResponseWriter, r *http.Request) {
 		message.WorldID = first.WorldID
 		message.TargetPeerID = first.TargetPeerID
 		bindPresenceRequest(&message, d.host.ID().String(), sessionID)
+		if message.Type == "webrtc.offer" {
+			message.PresenceSession = sessionID
+		}
 		requestSlots <- struct{}{}
 		requestGroup.Add(1)
 		go func(message gatewayMessage) {
@@ -1438,11 +1459,18 @@ func (d *daemon) handlePeerStream(stream network.Stream) {
 	defer stream.Close()
 	stream.SetReadDeadline(time.Now().Add(20 * time.Second))
 	var envelope gatewayMessage
-	decoder := json.NewDecoder(io.LimitReader(stream, 64<<10))
+	decoder := json.NewDecoder(io.LimitReader(stream, 128<<10))
 	if err := decoder.Decode(&envelope); err != nil {
 		return
 	}
-	bindPresenceRequest(&envelope, stream.Conn().RemotePeer().String(), envelope.PresenceSession)
+	presenceSession := envelope.PresenceSession
+	bindPresenceRequest(&envelope, stream.Conn().RemotePeer().String(), presenceSession)
+	envelope.gatewayPeerID = stream.Conn().RemotePeer().String()
+	if envelope.Type == "webrtc.offer" && presenceSessionPattern.MatchString(presenceSession) {
+		envelope.PresenceSession = presenceSession
+	} else if envelope.Type == "webrtc.offer" {
+		return
+	}
 	response, err := d.localRequest(envelope)
 	if err != nil {
 		response = peerResponse{Type: "error", WorldID: envelope.WorldID, RequestID: envelope.RequestID, Error: err.Error()}
@@ -1474,6 +1502,11 @@ func (d *daemon) localRequest(request gatewayMessage) (peerResponse, error) {
 			return peerResponse{}, errors.New("content_cache_not_authorized")
 		}
 		return d.assetChunk(request)
+	case "webrtc.offer":
+		if request.TargetPeerID != d.host.ID().String() || !presenceSessionPattern.MatchString(request.PresenceSession) {
+			return peerResponse{}, errors.New("webrtc_signaling_session_invalid")
+		}
+		return d.acceptWebRTCOffer(request)
 	default:
 		return peerResponse{}, errors.New("unsupported_request")
 	}
@@ -1481,12 +1514,14 @@ func (d *daemon) localRequest(request gatewayMessage) (peerResponse, error) {
 
 func (d *daemon) gatewayRequest(ctx context.Context, request gatewayMessage) (peerResponse, error) {
 	if request.TargetPeerID == d.host.ID().String() && request.WorldID == d.world.WorldID {
+		request.gatewayPeerID = d.host.ID().String()
 		return d.localRequest(request)
 	}
 	if session := d.browserHostSession(request.WorldID, request.TargetPeerID); session != nil {
 		return session.request(ctx, request)
 	}
 	if request.TargetPeerID == d.host.ID().String() {
+		request.gatewayPeerID = d.host.ID().String()
 		return d.localRequest(request)
 	}
 	peerID, err := peer.Decode(request.TargetPeerID)

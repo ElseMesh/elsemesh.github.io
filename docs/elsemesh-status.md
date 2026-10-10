@@ -105,11 +105,16 @@ host; no public endpoint or external-browser test is claimed.
 
 Still open: a real browser owner session against a deployed public WSS gateway,
 a second browser fetching from that host, gateway deployment and external
-network testing, browser-host presence, and direct WebRTC signaling/transport.
-The existing gateway integration covers loopback only. Standalone
-`thruholdd`/authorized caches remain the durable host path. Flip7 is offline
-until further notice, so no device-side graphics check was attempted this
-turn. See [browser-hosting.md](browser-hosting.md) for the workflow and exact
+network testing, browser-host presence, and cross-NAT WebRTC verification.
+Direct browser-to-standalone-daemon WebRTC is implemented: headless Chromium
+uses a separate loopback signaling gateway and target `worldd`, retrieves its
+signed manifest and verified asset directly, then exercises gateway fallback
+after closing the data channel. A separate Pion integration test covers
+duplicate request-ID rejection. These tests do not prove public NAT traversal
+or a deployed gateway. Standalone `thruholdd`/authorized caches remain the
+durable host path. Flip7 is offline until further notice, so no device-side
+graphics check was attempted this turn. See
+[browser-hosting.md](browser-hosting.md) for the workflow and exact
 verification boundary.
 
 Earlier Android arm64 `libzt.so` builds used the existing libzt checkout and
