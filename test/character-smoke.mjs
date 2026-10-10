@@ -1,7 +1,7 @@
 // Skinned character smoke test: loads a GLB (skin + clips), plays a clip and renders a few
 // frames of a studio view with the engine alone.
 //   node test/character-smoke.mjs [model.glb] [out.png] [clip] [yawDeg]
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,20 +20,31 @@ import { avatarMaterialOptions } from '../src/player/AvatarMaterials.js';
 import * as E from '../src/engine/index.js';
 
 const file = process.argv[ 2 ] || new URL( '../public/models/characters/joe.glb', import.meta.url ).pathname;
-const OUT = process.argv[ 3 ] || '/tmp/character-smoke.png';
+const TEMP_ROOT = process.env.PREFIX ? join( process.env.PREFIX, 'tmp' ) : process.platform === 'linux' ? '/var/tmp' : tmpdir();
+const OUT = process.argv[ 3 ] || join( TEMP_ROOT, 'character-smoke.png' );
 const CLIP = process.argv[ 4 ] || null;
 const YAW = Number( process.argv[ 5 ] || 0 ) * Math.PI / 180;
 
-// embedded images -> RGBA8 with macOS sips (no image decoding in Node)
-const tmp = mkdtempSync( join( tmpdir(), 'char-img-' ) );
+// Embedded images -> RGBA8 using the host image tools (no image decoding in Node).
+const tmp = mkdtempSync( join( TEMP_ROOT, 'char-img-' ) );
+process.on( 'exit', () => rmSync( tmp, { recursive: true, force: true } ) );
 let nImg = 0;
 globalThis.__assetImage = async ( bytes, mime ) => {
 
 	const src = join( tmp, 'i' + ( nImg ++ ) + ( mime === 'image/png' ? '.png' : '.jpg' ) );
 	writeFileSync( src, bytes );
-	const out = src + '.bmp';
-	execFileSync( 'sips', [ '-s', 'format', 'bmp', src, '--out', out ], { stdio: 'ignore' } );
-	return readBMP( readFileSync( out ) );
+	if ( process.platform === 'darwin' ) {
+
+		const out = src + '.bmp';
+		execFileSync( 'sips', [ '-s', 'format', 'bmp', src, '--out', out ], { stdio: 'ignore' } );
+		return readBMP( readFileSync( out ) );
+
+	}
+
+	const [ width, height ] = execFileSync( 'magick', [ 'identify', '-format', '%w %h', src ], { encoding: 'utf8' } ).split( ' ' ).map( Number );
+	const data = execFileSync( 'magick', [ src, '-alpha', 'on', '-depth', '8', 'RGBA:-' ], { maxBuffer: width * height * 4 + 1024 } );
+	if ( data.length !== width * height * 4 ) throw new Error( `Unexpected RGBA image size: ${ data.length } bytes for ${ width }x${ height }` );
+	return { data: new Uint8Array( data ), width, height };
 
 };
 
