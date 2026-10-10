@@ -26,6 +26,11 @@ import { MIX } from '../src/audio/SoundScape.js';
 import { bakeTerrainMaps } from '../src/world/terrain/TerrainBake.js';
 import { getDetailImage } from '../src/world/terrain/DetailTextures.js';
 import { encodeTerrainSurfaceAsset } from '../src/network/TerrainSurfaceAsset.js';
+import '../test/headless.mjs';
+import { GPU } from '../src/engine/gpu/GPU.js';
+import { readTexture } from '../src/engine/gpu/Readback.js';
+import { VillageTextures } from '../src/world/village/TextureBaker.js';
+import { encodeVillageMaterialAsset, wrapCompressedVillageMaterialAsset } from '../src/network/VillageMaterialAsset.js';
 
 const REPO = path.resolve( path.dirname( fileURLToPath( import.meta.url ) ), '..' );
 const args = process.argv.slice( 2 );
@@ -66,6 +71,18 @@ terrainSurfaceHeader.writeUInt32LE( terrainPayload.byteLength, 12 );
 const terrainSurface = Buffer.concat( [ terrainSurfaceHeader, deflateSync( terrainPayload, { level: 9 } ) ] );
 const terrainSurfaceAssetId = `sha256:${createHash( 'sha256' ).update( terrainSurface ).digest( 'hex' )}`;
 staticAssets.set( terrainSurfaceAssetId, terrainSurface );
+await GPU.init( { headless: true } );
+const villageTextures = new VillageTextures();
+villageTextures.bake();
+GPU.submit();
+const villageMaps = {};
+for ( const [ name, texture ] of Object.entries( villageTextures.textures ) ) villageMaps[ name ] = new Uint8Array( ( await readTexture( texture ) ).data );
+const villageMaterialsRaw = encodeVillageMaterialAsset( villageMaps );
+const villageMaterials = wrapCompressedVillageMaterialAsset( villageMaterialsRaw, bytes => deflateSync( bytes, { level: 9 } ) );
+const villageMaterialsAssetId = `sha256:${createHash( 'sha256' ).update( villageMaterials ).digest( 'hex' )}`;
+staticAssets.set( villageMaterialsAssetId, villageMaterials );
+villageTextures.dispose();
+GPU.device.destroy();
 const villageGLB = exportBatchGLB( generated.villageBatches, 'Procedural village', true );
 const villageAssetId = `sha256:${createHash( 'sha256' ).update( villageGLB ).digest( 'hex' )}`;
 const villageBounds = boundsForGLB( villageGLB );
@@ -170,8 +187,8 @@ const source = {
 		avatarComplexity: 20000,
 		physicsProfile: 'tidewater-default',
 		vehiclePolicy: { enabled: true, maxSpeed: 8, maxCombinedComplexity: 100000 },
-			requiredFeatures: [ 'tidewater.static-glb/1', 'tidewater.static-glb-quaternion/1', 'tidewater.village-materials/1', 'tidewater.terrain-surface/1', 'tidewater.static-vegetation/1', 'tidewater.static-reef/1', 'tidewater.island-ocean/1', 'tidewater.downeast-boat/1', 'tidewater.ambient-audio/1', 'tidewater.portal-handoff/1', 'tidewater.portal-preview-static/1' ],
-		maxPackageBytes: 96 * 1024 * 1024,
+			requiredFeatures: [ 'tidewater.static-glb/1', 'tidewater.static-glb-quaternion/1', 'tidewater.village-materials/1', 'tidewater.village-materials/2', 'tidewater.terrain-surface/1', 'tidewater.static-vegetation/1', 'tidewater.static-reef/1', 'tidewater.island-ocean/1', 'tidewater.downeast-boat/1', 'tidewater.ambient-audio/1', 'tidewater.portal-handoff/1', 'tidewater.portal-preview-static/1' ],
+		maxPackageBytes: 128 * 1024 * 1024,
 	},
 	hosts: [],
 	objects: [ {
@@ -232,6 +249,7 @@ const source = {
 		};
 	} ) ],
 	components: [
+		{ id: 'tw-component:island-village-materials', type: 'tidewater.village-materials/2', profile: 'original-tidewater-village-v1', dataAssetId: villageMaterialsAssetId, objectId: 'tw-object:island-village', priority: 'visible', streamingBounds: villageBounds },
 		{ id: 'tw-component:island-vegetation', type: 'tidewater.static-vegetation/1', priority: 'portal-preview', placementAssetId: vegetationAssetId },
 		{ id: 'tw-component:island-terrain', type: 'tidewater.terrain-surface/1', profile: 'example-island-v1', objectId: 'tw-object:island-terrain', dataAssetId: terrainSurfaceAssetId, priority: 'visible' },
 		...reefComponents,

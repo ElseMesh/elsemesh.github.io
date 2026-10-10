@@ -55,6 +55,7 @@
       "tidewater.static-glb/1",
       "tidewater.static-glb-quaternion/1",
       "tidewater.village-materials/1",
+      "tidewater.village-materials/2",
       "tidewater.terrain-surface/1",
       "tidewater.static-vegetation/1",
       "tidewater.static-reef/1",
@@ -64,7 +65,7 @@
       "tidewater.portal-handoff/1",
       "tidewater.portal-preview-static/1"
     ],
-    "maxPackageBytes": 100663296
+    "maxPackageBytes": 134217728
   },
   "hosts": [],
   "objects": [
@@ -11479,6 +11480,22 @@
     }
   ],
   "components": [
+    {
+      "id": "tw-component:island-village-materials",
+      "type": "tidewater.village-materials/2",
+      "profile": "original-tidewater-village-v1",
+      "dataAssetId": "sha256:60d14e77d041465d0d71b499a7e695ea5f12da696d5be4a616b0bde1d332bde6",
+      "objectId": "tw-object:island-village",
+      "priority": "visible",
+      "streamingBounds": {
+        "center": [
+          49.266165018081665,
+          5.180210828781128,
+          -59.4708137512207
+        ],
+        "radius": 106.39631016446681
+      }
+    },
     {
       "id": "tw-component:island-vegetation",
       "type": "tidewater.static-vegetation/1",

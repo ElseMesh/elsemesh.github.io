@@ -20,6 +20,9 @@ import { UniformBlock } from '../engine/gpu/Uniforms.js';
 import { Vector2 } from '../engine/math/Vector2.js';
 import { lodFadeModule } from '../materials/LODFade.js';
 import { villageMaterialRole } from './WorldVillageMaterial.js';
+import { decodeVillageMaterialAsset } from './VillageMaterialAsset.js';
+import { VillageTextures } from '../world/village/TextureBaker.js';
+import { createVillageMaterials } from '../world/village/VillageMaterials.js';
 
 const COMPONENTS = Object.freeze( {
 	POSITION: [ 'position', 3 ],
@@ -43,6 +46,9 @@ export async function loadWorldPackage( connector, { signal, assets: preloadedAs
 	root.name = `world:${connector.worldId}`;
 	root.userData.worldPackage = { parsed: new Map(), loadedObjects: new Set(), replacedByComponents: new Set(), connector, materialContext };
 	try {
+		const materialComponent = connector.manifest.components?.find( ( component ) => component.type === 'tidewater.village-materials/2' );
+		const selectedObjectIDs = objectIDs ? ( objectIDs instanceof Set ? objectIDs : new Set( objectIDs ) ) : null;
+		if ( materialComponent && ( ! selectedObjectIDs || selectedObjectIDs.has( materialComponent.objectId ) ) ) await installPackagedVillageMaterials( connector, root, signal );
 		await appendWorldPackageAssets( connector, root, assets, { signal, objectIDs } );
 		return root;
 	} catch ( error ) {
@@ -61,6 +67,8 @@ export async function appendWorldPackageAssets( connector, root, assets, { signa
 	}
 	const objectRecords = connector.manifest.objects || [];
 	const selectedObjects = objectIDs ? new Set( objectIDs ) : null;
+	const materialComponent = connector.manifest.components?.find( ( component ) => component.type === 'tidewater.village-materials/2' );
+	if ( materialComponent && ( ! selectedObjects || selectedObjects.has( materialComponent.objectId ) ) ) await installPackagedVillageMaterials( connector, root, signal );
 
 	for ( const object of objectRecords ) {
 
@@ -96,6 +104,25 @@ export async function appendWorldPackageAssets( connector, root, assets, { signa
 	}
 	return root;
 
+}
+
+async function installPackagedVillageMaterials( connector, root, signal ) {
+	const state = root.userData.worldPackage;
+	if ( state.ownedMaterialContext || state.disposed ) return;
+	const component = connector.manifest.components.find( ( candidate ) => candidate.type === 'tidewater.village-materials/2' );
+	const packed = await connector.getAsset( component.dataAssetId, { signal } );
+	if ( signal?.aborted || state.disposed ) throw signal?.reason || new DOMException( 'World unloaded', 'AbortError' );
+	const decoded = await decodeVillageMaterialAsset( packed );
+	if ( signal?.aborted || state.disposed ) throw signal?.reason || new DOMException( 'World unloaded', 'AbortError' );
+	const textures = new VillageTextures( { bakedMaps: decoded.maps } );
+	try {
+		textures.prepareBakedMaps();
+		state.ownedMaterialContext = { textures, materials: createVillageMaterials( textures ) };
+		state.materialContext = state.ownedMaterialContext;
+	} catch ( error ) {
+		textures.dispose();
+		throw error;
+	}
 }
 
 export function updateWorldPackageLOD( root, camera, loadBias = 0, now = performance.now() ) {
@@ -327,6 +354,8 @@ export function disposeWorldPackage( root ) {
 		for ( const geometry of geometries ) geometry.dispose();
 		for ( const material of materials ) material.dispose?.();
 		for ( const texture of textures ) texture.destroy();
+		for ( const material of Object.values( state?.ownedMaterialContext?.materials || {} ) ) material.dispose?.();
+		state?.ownedMaterialContext?.textures?.dispose();
 	};
 	if ( GPU.encoder ) GPU.onSubmit( null, release );
 	else release();

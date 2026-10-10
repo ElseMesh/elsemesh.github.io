@@ -583,18 +583,19 @@ const SETS = [
 	{ name: 'net', w: 256, h: 256, out: 'net', nra: null },
 ];
 
-function finalTexture( label, w, h ) {
+function finalTexture( label, w, h, data = null ) {
 
 	// RGBA8, full mip chain; sampled with smpAnisoRepeat (trilinear + 8x anisotropic, repeat)
-	return new Texture( { label, width: w, height: h, format: 'rgba8unorm', mips: true, usage: [ 'sample', 'storage', 'copyDst' ], sampler: 'anisoRepeat' } );
+	return new Texture( { label, width: w, height: h, format: 'rgba8unorm', data, mips: true, usage: [ 'sample', 'storage', 'copyDst', 'copySrc' ], sampler: 'anisoRepeat' } );
 
 }
 
 export class VillageTextures {
 
-	constructor() {
+	constructor( { bakedMaps = null } = {} ) {
 
-		this.baked = false;
+		this.baked = bakedMaps !== null;
+		this.hasBakedMaps = bakedMaps !== null;
 		this.bakeMs = 0;
 		this.textures = {};
 		this.jobs = [];
@@ -603,10 +604,10 @@ export class VillageTextures {
 		for ( const set of SETS ) {
 
 			const job = { set, fields: null, albedo: null, nra: null };
-			if ( set.nra ) job.fields = new Texture( { label: 'vlgFields_' + set.name, width: set.w, height: set.h, format: 'rgba16float', usage: [ 'sample', 'storage' ] } );
+			if ( set.nra && ! bakedMaps ) job.fields = new Texture( { label: 'vlgFields_' + set.name, width: set.w, height: set.h, format: 'rgba16float', usage: [ 'sample', 'storage' ] } );
 			if ( set.out ) {
 
-				job.albedo = finalTexture( set.out, set.w, set.h );
+				job.albedo = finalTexture( set.out, set.w, set.h, bakedMaps?.[ set.out ] || null );
 				this.textures[ set.out ] = job.albedo;
 				this._bytes += set.w * set.h * 4 * 4 / 3;
 
@@ -614,7 +615,7 @@ export class VillageTextures {
 
 			if ( set.nra ) {
 
-				job.nra = finalTexture( set.nra, set.w, set.h );
+				job.nra = finalTexture( set.nra, set.w, set.h, bakedMaps?.[ set.nra ] || null );
 				this.textures[ set.nra ] = job.nra;
 				this._bytes += set.w * set.h * 4 * 4 / 3;
 
@@ -627,6 +628,19 @@ export class VillageTextures {
 		// kept for API compatibility with the TSL version (a zero node added to the colour of every
 		// village material so the bake ran on first use); the meshes now call bake() themselves
 		this.trigger = null;
+
+	}
+
+	// Upload packaged level-zero maps, then regenerate their specified box-filtered mip chains.
+	prepareBakedMaps() {
+
+		if ( ! this.hasBakedMaps ) return;
+		for ( const texture of Object.values( this.textures ) ) {
+			texture.getGPU();
+			generateMipmaps( texture );
+		}
+		GPU.submit();
+		this.hasBakedMaps = false;
 
 	}
 

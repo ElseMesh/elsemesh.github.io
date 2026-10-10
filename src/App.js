@@ -929,6 +929,9 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 				// SoundScape consumes the signed component from the connector directly; record
 				// installation here so view streaming does not repeatedly request its loop assets.
 				installedIDs.add( component.id );
+			} else if ( component.type === 'tidewater.village-materials/2' ) {
+				// WorldPackage loads these maps only when the associated village object is needed.
+				installed.push( { dispose() {} } );
 			} else if ( component.type === 'tidewater.downeast-boat/1' ) {
 				const object = connector.manifest.objects.find( ( candidate ) => candidate.id === component.objectId );
 				if ( ! object ) throw new Error( `Boat component ${component.id} has no berth object` );

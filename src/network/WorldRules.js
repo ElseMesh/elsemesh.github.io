@@ -15,6 +15,7 @@ export const SUPPORTED_WORLD_FEATURES = new Set( [
 	'tidewater.ambient-audio/1',
 	'tidewater.downeast-boat/1',
 	'tidewater.village-materials/1',
+	'tidewater.village-materials/2',
 	'tidewater.procedural-island-terrain/1',
 	'tidewater.terrain-surface/1',
 ] );
