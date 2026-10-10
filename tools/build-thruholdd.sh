@@ -93,7 +93,7 @@ mkdir -p "$OUT"
 	cd "$BUILD_SERVER"
 	CGO_ENABLED=1 GOOS="$GOOS" GOARCH="$GOARCH" \
 		CGO_CFLAGS="-I$LIBZT_INCLUDE_DIR ${CGO_CFLAGS:-}" \
-		CGO_LDFLAGS="-L$LIBZT_LIB_DIR -lzt $LIBZT_CXX_LIB ${CGO_LDFLAGS:-}" \
+		CGO_LDFLAGS="-L$LIBZT_LIB_DIR -lzt $LIBZT_CXX_LIB -Wl,-rpath,\$ORIGIN ${CGO_LDFLAGS:-}" \
 		go build -buildvcs=false -trimpath -tags zerotier \
 		-ldflags="$LDFLAGS" \
 		-o "$OUT/thruholdd" ./worldd
