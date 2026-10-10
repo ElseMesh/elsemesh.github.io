@@ -76,30 +76,32 @@ verifies Linux startup, not peer discovery or public reachability.
 
 ### Browser-hosted owner and direct browser transport
 
-`WorldConnector` remains visitor-only and opens WebSocket or WebTransport
-sessions to a Go gateway. The gateway now has a locally tested `/browser-host`
-WebSocket endpoint: it verifies a fresh owner-key proof, serves the registered
-signed manifest, discovers active browser-host owners through `/api/lookup`,
-and forwards bounded asset requests. `worldd` limits hosts and pending
-requests and removes a host after heartbeat expiry. The shipped browser has no
-owner worker or host controls yet, and browser-host presence is not supported.
-There is no `RTCPeerConnection` or data-channel transport. Direct WebRTC still
-needs signaling and STUN/TURN or gateway fallback. See
-[browser-hosting.md](browser-hosting.md) for the protocol and remaining checks.
+The browser client now has an owner worker and controls at **World → Browser
+hosting**. It loads a profile, verifies the owner-signed manifest and each
+declared asset, checks `node.key` against the owner key, registers with a fresh
+challenge, maintains heartbeats, and serves bounded asset ranges. Hosted-world
+invites include the chosen gateway. The Go gateway enforces session and request
+limits. The frontend build, focused browser-host endpoint check, full npm test
+suite, Go `worldd` tests, and loopback WSS gateway test passed for commit
+`ac86602`. The full suite exposed and now exercises Go validation for the
+Example Island's `village-materials/2` component.
 
-Browser-host registration and serving have loopback tests only. The Android
-arm64 `libzt.so` was rebuilt from the existing libzt checkout against the
-ZeroTierOne `exp3` fork (`be0d1923d`) using
-`tools/build-libzt-android.sh`; CMake artifacts stayed in
+Still open: a real browser owner session against a deployed public WSS gateway,
+a second browser fetching from that host, gateway deployment and external
+network testing, browser-host presence, and direct WebRTC signaling/transport.
+The existing gateway integration covers loopback only. Standalone
+`thruholdd`/authorized caches remain the durable host path. Flip7 is offline
+until further notice, so no device-side graphics check was attempted this
+turn. See [browser-hosting.md](browser-hosting.md) for the workflow and exact
+verification boundary.
+
+Earlier Android arm64 `libzt.so` builds used the existing libzt checkout and
+ZeroTierOne `exp3` fork (`be0d1923d`); CMake artifacts stayed in
 `/mnt/kingston/builds/rebroad/src/libzt.build`, with no build-to-source
-symlinks. `thruholdd` revision `0cfcde2` was rebuilt against that library and
-ran on the Flip7. Its reported revision matched, and two isolated
-`--print-node-id` starts reused the same temporary identity. The phone's
-keyguard is currently locked, so this did not verify client rendering; the
-daemon smoke also did not join ZeroTier. The browser worker/UI, public HTTPS/WSS
-deployment, external-network tests, browser-host presence, and WebRTC are not
-implemented; normal browser world access still requires an HTTPS/WSS gateway
-connected to a standalone owner or authorized cache node.
+symlinks. The `thruholdd` revision then tested on the Flip7 was `0cfcde2`, and
+two isolated `--print-node-id` starts reused their temporary identity. These
+historical daemon checks are separate from the current offline phone status;
+they did not verify current client rendering or remote/NAT reachability.
 
 ### 1. Complete the island as a portable example world
 
