@@ -25,12 +25,14 @@ procedural example, use the published client with `?example=1`.
 
 ## Build on this Linux development machine
 
-Source edits belong in `~/src/tidewater`; builds belong in the external build tree.
-Synchronize before building:
+Source edits belong in `~/src/elsemesh`; builds belong in the independent
+external build tree. Copy source into that tree before building. Do not use a
+Git-linked build worktree or link the build tree back to source:
 
 ```sh
-cpto --no-lngit --nogit "$HOME/src/tidewater" /mnt/kingston/builds/rebroad/src/tidewater.build
-cd /mnt/kingston/builds/rebroad/src/tidewater.build
+mkdir -p /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
+cpto --no-lngit --nogit "$HOME/src/elsemesh" /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
+cd /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
 npm ci
 npm run build
 cd server
@@ -42,7 +44,7 @@ go build -o bin/worldd-linux-amd64 ./worldd
 Run in one terminal and leave it open:
 
 ```sh
-cd /mnt/kingston/builds/rebroad/src/tidewater.build
+cd /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
 node tools/serve-world-profile.mjs \
   --worldd server/bin/worldd-linux-amd64 \
   --worlds-dir "$HOME/.config/elsemesh/worlds" \
@@ -58,7 +60,7 @@ Run in a second terminal. The bootstrap identity is read from the island's
 persistent profile, rather than copied from an old test run:
 
 ```sh
-cd /mnt/kingston/builds/rebroad/src/tidewater.build
+cd /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
 island_peer=$(server/bin/worldd-linux-amd64 \
   --worlds-dir "$HOME/.config/elsemesh/worlds" \
   --world-profile island-example --print-node-id)

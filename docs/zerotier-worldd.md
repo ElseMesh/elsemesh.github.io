@@ -139,19 +139,28 @@ firewalls. The system's physical route to ZeroTier roots uses `wlo1`.
 
 `thruholdd` includes libzt and joins the dedicated network by default, without
 installing the separate ZeroTier One service or passing `--zerotier-network`.
-Build libzt for the target platform first, then use the build helper with its
-headers and shared library:
+Keep the source checkout and build tree separate. On this Linux development
+machine, sync by copying the source into the independent subdirectory of the
+mirrored `.build` tree; do not use a Git-linked build worktree or symlink the
+build tree to source. Build libzt for the target platform first, then use the
+helper with its headers and shared library. When run from the source checkout,
+the helper selects the external `independent` build copy automatically;
+`THRUHOLDD_BUILD_SERVER` can override the server build directory explicitly.
 
 ```sh
+mkdir -p /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
+cpto --no-lngit --nogit "$HOME/src/elsemesh" /mnt/kingston/builds/rebroad/src/elsemesh.build/independent
 LIBZT_INCLUDE_DIR=/path/to/libzt/include \
 LIBZT_LIB_DIR=/path/to/libzt/lib \
-THRUHOLDD_BUILD_SERVER=/path/to/external-build/server \
-tools/build-thruholdd.sh
+BUILD_REVISION="$(git -C "$HOME/src/elsemesh" rev-parse HEAD)" \
+"$HOME/src/elsemesh/tools/build-thruholdd.sh"
 ```
 
 This builds from the selected external source mirror and creates `thruholdd`
-under its `bin/` directory. Set `BUILD_REVISION` to the source repository's
-current commit when the build mirror's Git metadata is stale. At runtime,
+under its `bin/` directory. The helper embeds the source checkout's current
+commit; set `BUILD_REVISION` explicitly when building from a source snapshot
+without Git metadata. It refuses server or output directories that resolve
+inside the source checkout. At runtime,
 make `libzt.so` available to
 the dynamic linker (for example with `LD_LIBRARY_PATH`). The default network
 is compiled into the ZeroTier-enabled build, so neither the network ID nor a
