@@ -128,6 +128,17 @@ authorized cache node.
 - The account and role security contract is recorded in [account-roles.md](account-roles.md). The opt-in `accountd` broker verifies Google ID tokens and binds sign-in to a browser account Ed25519 key; the conditional sign-in/key controls are wired into the app UI.
 - Keep worlds and node identities usable without a Google account. Owner-signed role and revocation validators plus `--sign-role-grant` and `--sign-role-revocations` commands are implemented. `worldd` accepts, persists, and serves owner-signed revocation state per node; configured `--role-state-from` peers synchronize newer signed states over libp2p while preserving increasing serials across restarts. The owner-only `POST /api/world/proposals` inbox consumes `world.content.edit` grants, requires fresh revocation state, and stores unsigned proposals privately for owner review. Local owner-only listing, patch export, and explicit reviewed-source publication are implemented. Remote manifest/asset writes, portal and role management UI, proposal review UI, durable rejection history, and automatic source-currentness checks remain unimplemented.
 
+## Avatar complexity budget verification (2026-10-10)
+
+`rules.avatarComplexity` is enforced per remote avatar. If the requested stock
+mesh exceeds the signed triangle cap, the client attempts the matching medium
+and low meshes before using its simple fallback. The focused regression test
+proves a 4,000-triangle cap chooses the 3,682-triangle male medium mesh, then
+uses the low mesh at distance. Matched headless walk renders for both stock
+avatars are recorded in [avatar-lods.md](../tools/blender/avatar-lods.md).
+This is a per-avatar cap, not a cap on total remote players. Live browser,
+portal-view and Flip7 visual checks remain outstanding.
+
 ## Completion standard
 
 The network is not complete merely because nodes can exchange signed manifests and immutable assets. The remaining gates above need implementation, tests at the same scope as each claim, operational documentation, and a working end-to-end deployment. Desktop and Android rendering must both be checked; changes to the portable package must not silently replace or reduce quality in the existing procedural game.

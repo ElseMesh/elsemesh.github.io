@@ -9,6 +9,8 @@ import { avatarMaterialOptions } from '../src/player/AvatarMaterials.js';
 import { DEFAULT_APPEARANCE } from '../src/player/AvatarAppearance.js';
 
 const male = parseGLB(readFileSync(new URL('../public/models/characters/stock-player.glb', import.meta.url)));
+const maleMedium = parseGLB(readFileSync(new URL('../public/models/characters/stock-player-medium.glb', import.meta.url)));
+const maleLow = parseGLB(readFileSync(new URL('../public/models/characters/stock-player-low.glb', import.meta.url)));
 const female = parseGLB(readFileSync(new URL('../public/models/characters/stock-female.glb', import.meta.url)));
 assert.equal(avatarTriangles(male), 7364); assert.equal(avatarTriangles(female), 8732);
 for (const source of [male, female]) for (const clip of ['idle', 'walk', 'run', 'helm']) assert.ok(source.animations.some(a => a.name === clip));
@@ -41,6 +43,18 @@ const capped = new RemoteAvatar({ maxComplexity: 100, loadSource: async () => ma
 await capped.ready; assert.equal(capped.model, null); assert.equal(capped.fallback.visible, true); capped.dispose();
 const tiny = new RemoteAvatar({ maxComplexity: 1, loadSource: async () => male }); await tiny.ready;
 assert.equal(tiny.fallback.visible, false); tiny.dispose();
+const budgetAssets = [];
+const budgetAvatar = new RemoteAvatar({ maxComplexity: 4000, loadSource: async asset => {
+	budgetAssets.push(asset);
+	return ({ 'stock-player': male, 'stock-player-medium': maleMedium, 'stock-player-low': maleLow })[asset];
+}, createModel: async () => model() });
+await budgetAvatar.ready;
+assert.deepEqual(budgetAssets, ['stock-player', 'stock-player-medium'], 'An avatar budget tries the next coarser mesh before showing fallback');
+assert.equal(budgetAvatar.effectiveAsset, 'stock-player-medium');
+assert.ok(budgetAvatar.model, 'The fitting reduced avatar is rendered');
+budgetAvatar.setViewDistance(50); await budgetAvatar.ready;
+assert.equal(budgetAssets.at(-1), 'stock-player-low', 'Distance LOD still selects a coarser mesh under the avatar budget');
+budgetAvatar.dispose();
 const releases = [];
 const resources = { jointBuffer: { destroy: () => releases.push('joints') }, meshes: [{ geometry: { dispose: () => releases.push('geometry') } }], ownedTextures: new Map([['texture', { destroy: () => releases.push('texture') }]]), materials: [{ dispose: () => releases.push('material') }] };
 SkinnedModel.prototype.dispose.call(resources); SkinnedModel.prototype.dispose.call(resources);

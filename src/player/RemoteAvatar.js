@@ -84,11 +84,29 @@ export class RemoteAvatar {
 		if (next !== this.lod) { this.lod = next; this.setAppearance(this.appearance); }
 	}
 	async loadCharacter(asset, version) {
-		const source = await this.loadSource(asset);
+		const baseAsset = asset.replace(/-(medium|low)$/, '');
+		const firstLOD = asset.endsWith('-low') ? 2 : asset.endsWith('-medium') ? 1 : 0;
+		let source, selectedAsset;
+		for (let lod = firstLOD; lod < 3; lod ++) {
+
+			const candidate = baseAsset + ['', '-medium', '-low'][ lod ];
+			try {
+				const loaded = await this.loadSource(candidate);
+				if (avatarTriangles(loaded) <= this.maxComplexity) { source = loaded; selectedAsset = candidate; break; }
+			} catch ( error ) {
+				if ( lod === 2 ) throw error;
+			}
+			if (this.disposed || version !== this.version) return false;
+
+		}
 		if (this.disposed || version !== this.version) return false;
-		if (avatarTriangles(source) > this.maxComplexity) {
+		if (!source) {
 			if (!this.model) this.fallback.visible = this.maxComplexity >= 12;
 			return false;
+		}
+		if (this.model && selectedAsset === this.effectiveAsset) {
+			tintAvatar(this.model, this.appearance);
+			return true;
 		}
 		const model = await this.createModel(source, { materials: avatarMaterialOptions });
 		if (this.disposed || version !== this.version) { model.dispose(); return false; }
@@ -102,6 +120,7 @@ export class RemoteAvatar {
 		this.finishTransition();
 		const previous = this.model;
 		this.model = model;
+		this.effectiveAsset = selectedAsset;
 		this.group.add(model.group);
 		this.fallback.visible = false; this.error = null; this.failedKey = null;
 		if (previous) {
