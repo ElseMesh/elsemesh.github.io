@@ -113,7 +113,7 @@ export class App {
 		const platform = navigator.userAgentData?.platform || navigator.platform || '';
 		this.isLinuxDesktop = /linux/i.test( platform ) && ! /android/i.test( navigator.userAgent );
 		const savedGraphicsPriority = readGraphicsPriority();
-		this.graphicsPriority = this.isLinuxDesktop && savedGraphicsPriority === 'quality' ? 'quality' : 'fps';
+		this.graphicsPriority = this.isLinuxDesktop && ( this.qs.has( 'quality' ) || savedGraphicsPriority === 'quality' ) ? 'quality' : 'fps';
 		this.desktopAdaptiveScale = this.isLinuxDesktop && this.graphicsPriority === 'fps';
 		// Keep the Linux canvas slightly below the display resolution so full-screen post passes
 		// (temporal upscale, haze, bloom and grading) do not remain full cost when the scene scale drops.

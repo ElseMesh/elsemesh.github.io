@@ -5,8 +5,8 @@ usage() {
   cat <<'EOF'
 Usage: tools/elsemesh-chromium-webgpu.sh [URL]
 
-Open ElseMesh in a dedicated Chromium app window with WebGPU enabled.
-The default URL is https://elsemesh.org/.
+Open ElseMesh in a dedicated Chromium app window with WebGPU enabled and
+full-resolution graphics. The default URL is https://elsemesh.org/?quality=1.
 
 Set CHROMIUM to choose the Chromium executable and
 ELSEMESH_CHROMIUM_PROFILE to choose its isolated profile directory.
@@ -18,7 +18,7 @@ if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   exit 0
 fi
 
-url=${1:-https://elsemesh.org/}
+url=${1:-https://elsemesh.org/?quality=1}
 chromium=${CHROMIUM:-}
 if [[ -z $chromium ]]; then
   for candidate in chromium chromium-browser google-chrome; do
