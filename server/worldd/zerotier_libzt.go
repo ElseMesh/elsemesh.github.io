@@ -48,6 +48,7 @@ import (
 
 const defaultZeroTierNetworkID = "e3918db4832a3056"
 const daemonName = "thruholdd"
+const ztSocketCallTimeout = 10 * time.Millisecond
 
 type libztRuntime struct {
 	networkID    uint64
@@ -61,6 +62,9 @@ type libztRuntime struct {
 	listener     int
 	ipv4Listener int
 	listenerOnce sync.Once
+	bridgeCancel context.CancelFunc
+	acceptWG     sync.WaitGroup
+	proxyWG      sync.WaitGroup
 }
 
 func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
@@ -201,12 +205,15 @@ func (z *libztRuntime) Libp2pOptions() []libp2p.Option {
 
 func (z *libztRuntime) StartBridge(ctx context.Context, port int) error {
 	z.port = port
-	if err := z.startBridgeListener(ctx, z.address.String(), C.ZTS_AF_INET6); err != nil {
+	bridgeCtx, cancel := context.WithCancel(ctx)
+	z.bridgeCancel = cancel
+	if err := z.startBridgeListener(bridgeCtx, z.address.String(), C.ZTS_AF_INET6); err != nil {
+		cancel()
 		return err
 	}
 	if z.ipv4 != nil {
-		if err := z.startBridgeListener(ctx, z.ipv4.String(), C.ZTS_AF_INET); err != nil {
-			z.closeListener()
+		if err := z.startBridgeListener(bridgeCtx, z.ipv4.String(), C.ZTS_AF_INET); err != nil {
+			_ = z.CloseListeners()
 			return err
 		}
 	}
@@ -228,23 +235,20 @@ func (z *libztRuntime) startBridgeListener(ctx context.Context, addressText stri
 		C.zts_close(C.int(fd))
 		return fmt.Errorf("libzt TCP listen failed (%d)", code)
 	}
-	// libzt's blocking accept does not wake reliably when zts_close is called
-	// from another goroutine. A receive timeout bounds cancellation latency and
-	// lets the accept loop observe ctx before the listener is closed.
-	if code := int(C.zts_set_recv_timeout(C.int(fd), 0, 250000)); code != 0 {
+	// lwIP's accept path does not apply SO_RCVTIMEO. A nonblocking listener lets
+	// the accept loop observe cancellation without racing zts_node_free().
+	if code := int(C.zts_set_blocking(C.int(fd), 0)); code != 0 {
 		C.zts_close(C.int(fd))
-		return fmt.Errorf("libzt TCP accept timeout setup failed (%d)", code)
+		return fmt.Errorf("libzt nonblocking TCP listener setup failed (%d)", code)
 	}
 	if family == C.ZTS_AF_INET {
 		z.ipv4Listener = fd
 	} else {
 		z.listener = fd
 	}
+	z.acceptWG.Add(1)
 	go func() {
-		<-ctx.Done()
-		z.closeListener()
-	}()
-	go func() {
+		defer z.acceptWG.Done()
 		for ctx.Err() == nil {
 			var remote [C.ZTS_IP_MAX_STR_LEN]C.char
 			var remotePort C.ushort
@@ -256,14 +260,26 @@ func (z *libztRuntime) startBridgeListener(ctx context.Context, addressText stri
 				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			go z.proxy(accepted)
+			if code := int(C.zts_set_blocking(C.int(accepted), 1)); code != 0 {
+				C.zts_close(C.int(accepted))
+				continue
+			}
+			ztConn, err := newZTConn(accepted, nil, nil)
+			if err != nil {
+				C.zts_close(C.int(accepted))
+				continue
+			}
+			z.proxyWG.Add(1)
+			go func() {
+				defer z.proxyWG.Done()
+				z.proxy(ztConn)
+			}()
 		}
 	}()
 	return nil
 }
 
-func (z *libztRuntime) proxy(fd int) {
-	ztConn := &ztConn{fd: fd}
+func (z *libztRuntime) proxy(ztConn *ztConn) {
 	defer ztConn.Close()
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(z.port)), 5*time.Second)
 	if err != nil {
@@ -280,9 +296,32 @@ func (z *libztRuntime) proxy(fd int) {
 	<-done
 }
 
-func (z *libztRuntime) Close() error {
-	z.closeOnce.Do(func() { C.zts_node_stop() })
+func (z *libztRuntime) StopAccepting() error {
+	if z.bridgeCancel != nil {
+		z.bridgeCancel()
+	}
+	z.acceptWG.Wait()
+	return nil
+}
+
+func (z *libztRuntime) CloseListeners() error {
+	if err := z.StopAccepting(); err != nil {
+		return err
+	}
 	z.closeListener()
+	return nil
+}
+
+func (z *libztRuntime) Stop() error {
+	if err := z.CloseListeners(); err != nil {
+		return err
+	}
+	z.proxyWG.Wait()
+	var stopCode C.int
+	z.closeOnce.Do(func() { stopCode = C.zts_node_free() })
+	if stopCode != 0 {
+		return fmt.Errorf("libzt node shutdown failed (%d)", int(stopCode))
+	}
 	return nil
 }
 
@@ -346,59 +385,137 @@ func (ztDialer) DialContext(ctx context.Context, _, address string) (net.Conn, e
 		C.zts_close(C.int(fd))
 		return nil, fmt.Errorf("read libzt remote socket address: %w", err)
 	}
-	return &ztConn{fd: fd, localAddr: localAddr, remoteAddr: remoteAddr}, nil
+	conn, err := newZTConn(fd, localAddr, remoteAddr)
+	if err != nil {
+		C.zts_close(C.int(fd))
+		return nil, err
+	}
+	return conn, nil
 }
 
 type ztConn struct {
-	fd         int
-	localAddr  net.Addr
-	remoteAddr net.Addr
-	closeOnce  sync.Once
+	fd            int
+	localAddr     net.Addr
+	remoteAddr    net.Addr
+	ioMu          sync.Mutex
+	deadlineMu    sync.RWMutex
+	readDeadline  time.Time
+	writeDeadline time.Time
+	closed        chan struct{}
+	closeOnce     sync.Once
+	closeErr      error
+}
+
+func newZTConn(fd int, localAddr, remoteAddr net.Addr) (*ztConn, error) {
+	seconds, micros := socketDurationTimeout(ztSocketCallTimeout)
+	if code := int(C.zts_set_recv_timeout(C.int(fd), seconds, micros)); code != 0 {
+		return nil, fmt.Errorf("set libzt read poll timeout failed (%d)", code)
+	}
+	if code := int(C.zts_set_send_timeout(C.int(fd), seconds, micros)); code != 0 {
+		return nil, fmt.Errorf("set libzt write poll timeout failed (%d)", code)
+	}
+	return &ztConn{fd: fd, localAddr: localAddr, remoteAddr: remoteAddr, closed: make(chan struct{})}, nil
 }
 
 func (c *ztConn) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	var socketErr C.int
-	n := int(C.zt_read_with_errno(C.int(c.fd), unsafe.Pointer(&p[0]), C.size_t(len(p)), &socketErr))
-	if n == 0 {
-		return 0, io.EOF
-	}
-	if n < 0 {
-		if socketErr == C.ZTS_EAGAIN {
+	for {
+		if c.isClosed() {
+			return 0, net.ErrClosed
+		}
+		if c.deadlineExpired(true) {
 			return 0, os.ErrDeadlineExceeded
+		}
+		c.ioMu.Lock()
+		if c.isClosed() {
+			c.ioMu.Unlock()
+			return 0, net.ErrClosed
+		}
+		var socketErr C.int
+		n := int(C.zt_read_with_errno(C.int(c.fd), unsafe.Pointer(&p[0]), C.size_t(len(p)), &socketErr))
+		c.ioMu.Unlock()
+		if n == 0 {
+			return 0, io.EOF
+		}
+		if n > 0 {
+			return n, nil
+		}
+		if socketErr == C.ZTS_EAGAIN {
+			if c.isClosed() {
+				return 0, net.ErrClosed
+			}
+			if c.deadlineExpired(true) {
+				return 0, os.ErrDeadlineExceeded
+			}
+			continue
 		}
 		return 0, fmt.Errorf("libzt read failed (%d)", int(socketErr))
 	}
-	return n, nil
 }
 
 func (c *ztConn) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	var socketErr C.int
-	n := int(C.zt_write_with_errno(C.int(c.fd), unsafe.Pointer(&p[0]), C.size_t(len(p)), &socketErr))
-	if n < 0 {
-		if socketErr == C.ZTS_EAGAIN {
-			return 0, os.ErrDeadlineExceeded
+	written := 0
+	for written < len(p) {
+		if c.isClosed() {
+			return written, net.ErrClosed
 		}
-		return 0, fmt.Errorf("libzt write failed (%d)", int(socketErr))
+		if c.deadlineExpired(false) {
+			return written, os.ErrDeadlineExceeded
+		}
+		c.ioMu.Lock()
+		if c.isClosed() {
+			c.ioMu.Unlock()
+			return written, net.ErrClosed
+		}
+		var socketErr C.int
+		remaining := p[written:]
+		n := int(C.zt_write_with_errno(C.int(c.fd), unsafe.Pointer(&remaining[0]), C.size_t(len(remaining)), &socketErr))
+		c.ioMu.Unlock()
+		if n > 0 {
+			written += n
+			continue
+		}
+		if socketErr == 0 {
+			return written, io.ErrNoProgress
+		}
+		if socketErr == C.ZTS_EAGAIN {
+			if c.isClosed() {
+				return written, net.ErrClosed
+			}
+			if c.deadlineExpired(false) {
+				return written, os.ErrDeadlineExceeded
+			}
+			continue
+		}
+		return written, fmt.Errorf("libzt write failed (%d)", int(socketErr))
 	}
-	return n, nil
+	return written, nil
 }
 
 func (c *ztConn) Close() error {
-	c.closeOnce.Do(func() { C.zts_close(C.int(c.fd)) })
-	return nil
+	c.closeOnce.Do(func() {
+		close(c.closed)
+		c.ioMu.Lock()
+		if code := int(C.zts_close(C.int(c.fd))); code != 0 {
+			c.closeErr = fmt.Errorf("libzt socket close failed (%d)", code)
+		}
+		c.ioMu.Unlock()
+	})
+	return c.closeErr
 }
 
 func (c *ztConn) LocalAddr() net.Addr {
 	if c.localAddr != nil {
 		return c.localAddr
 	}
+	c.ioMu.Lock()
 	addr, _ := ztSocketAddr(c.fd, false)
+	c.ioMu.Unlock()
 	if addr == nil {
 		return &net.TCPAddr{}
 	}
@@ -408,38 +525,54 @@ func (c *ztConn) RemoteAddr() net.Addr {
 	if c.remoteAddr != nil {
 		return c.remoteAddr
 	}
+	c.ioMu.Lock()
 	addr, _ := ztSocketAddr(c.fd, true)
+	c.ioMu.Unlock()
 	if addr == nil {
 		return &net.TCPAddr{}
 	}
 	return addr
 }
 func (c *ztConn) SetDeadline(deadline time.Time) error {
-	if err := c.SetReadDeadline(deadline); err != nil {
-		return err
-	}
-	return c.SetWriteDeadline(deadline)
+	c.deadlineMu.Lock()
+	c.readDeadline = deadline
+	c.writeDeadline = deadline
+	c.deadlineMu.Unlock()
+	return nil
 }
 func (c *ztConn) SetReadDeadline(deadline time.Time) error {
-	seconds, micros := socketTimeout(deadline)
-	if code := int(C.zts_set_recv_timeout(C.int(c.fd), seconds, micros)); code != 0 {
-		return fmt.Errorf("set libzt receive deadline failed (%d)", code)
-	}
+	c.deadlineMu.Lock()
+	c.readDeadline = deadline
+	c.deadlineMu.Unlock()
 	return nil
 }
 func (c *ztConn) SetWriteDeadline(deadline time.Time) error {
-	seconds, micros := socketTimeout(deadline)
-	if code := int(C.zts_set_send_timeout(C.int(c.fd), seconds, micros)); code != 0 {
-		return fmt.Errorf("set libzt send deadline failed (%d)", code)
-	}
+	c.deadlineMu.Lock()
+	c.writeDeadline = deadline
+	c.deadlineMu.Unlock()
 	return nil
 }
 
-func socketTimeout(deadline time.Time) (C.int, C.int) {
-	if deadline.IsZero() {
-		return 0, 0
+func (c *ztConn) deadlineExpired(read bool) bool {
+	c.deadlineMu.RLock()
+	deadline := c.writeDeadline
+	if read {
+		deadline = c.readDeadline
 	}
-	d := time.Until(deadline)
+	c.deadlineMu.RUnlock()
+	return !deadline.IsZero() && !time.Now().Before(deadline)
+}
+
+func (c *ztConn) isClosed() bool {
+	select {
+	case <-c.closed:
+		return true
+	default:
+		return false
+	}
+}
+
+func socketDurationTimeout(d time.Duration) (C.int, C.int) {
 	if d <= 0 {
 		d = time.Microsecond
 	}

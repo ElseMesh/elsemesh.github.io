@@ -14,7 +14,9 @@ type zeroTierRuntime interface {
 	NodeID() string
 	Libp2pOptions() []libp2p.Option
 	StartBridge(context.Context, int) error
-	Close() error
+	StopAccepting() error
+	CloseListeners() error
+	Stop() error
 }
 
 func zeroTierMultiaddrs(addresses []net.IP, port int) ([]ma.Multiaddr, error) {

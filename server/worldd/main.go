@@ -408,10 +408,14 @@ func run() error {
 	defer func() {
 		stop()
 		if zeroTier != nil {
-			_ = zeroTier.Close()
+			_ = zeroTier.StopAccepting()
 		}
 		if p2pHost != nil {
 			_ = p2pHost.Close()
+		}
+		if zeroTier != nil {
+			_ = zeroTier.CloseListeners()
+			_ = zeroTier.Stop()
 		}
 	}()
 	if *zeroTierNetwork != "" {

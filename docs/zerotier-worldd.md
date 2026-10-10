@@ -533,21 +533,75 @@ The remaining tests are:
 
 ### Listener shutdown check (2026-10-10)
 
-`libztRuntime.startBridgeListener` sets a 250 ms receive timeout on each
-libzt TCP listener. This bounds the blocking `zts_accept` call so the accept
-goroutine can observe context cancellation before listener teardown. Without a
-bounded accept wait, earlier Linux shutdown attempts remained blocked while
-`zts_close` waited on a listener with another goroutine inside `zts_accept`.
+An earlier implementation set a 250 ms receive timeout on each libzt listener.
+That did not bound `zts_accept`: inspection of the libzt lwIP socket code showed
+that its `lwip_accept()` path does not apply `SO_RCVTIMEO`. On Android, SIGTERM
+while a peer was connected then caused `FORTIFY: pthread_mutex_lock called on a
+destroyed mutex` while a goroutine was still in `zts_accept` as libzt was being
+freed. The earlier idle Android shutdown check therefore did not verify the
+active-peer shutdown path.
 
-A fresh Linux amd64 build joined the dedicated network using isolated temporary
-world and ZeroTier state. SIGTERM stopped that exact process within five
-seconds; it exited with the expected signal status and required neither SIGQUIT
-nor a forced kill. This verifies the current source-level workaround on Linux,
-but does not establish that libzt shutdown is correct on every platform. The
-focused `TestZeroTier*` suite passed, and the build helper completed for Linux
-amd64 and Android arm64 at revision `7d44d83`. The Android artifact is an
-AArch64 Android 26 executable, but the Flip7 became unreachable over SSH and
-USB ADB listed no device during follow-up, so Android runtime shutdown remains
-unverified. A targeted libzt change is not currently justified by the Linux
-result; revisit it if the bounded timeout fails on Android or other supported
-platforms.
+The implementation makes listener sockets nonblocking, cancels and joins
+accept loops before teardown, closes the libp2p host before closing libzt
+listeners, and waits for accepted bridge proxies before calling
+`zts_node_free()`. Focused Linux tests and Linux/Android arm64 builds passed.
+The Linux active-peer result is recorded below; the earlier Android idle test
+does not verify Android shutdown with an active peer.
+
+The last isolated Android runtime attempt used the revised binary and a
+previously successful test identity, but its bootstrap dial timed out and
+`dhtPeers` stayed at zero, so it did not exercise shutdown with an active peer.
+The subsequent 6PLANE attempt could not be recovered after its observation
+handle disappeared. A read-only search of `/var/log/fw.log` for the recorded
+test node addresses and port found no matching entries; this neither proves
+the test traffic was delivered nor identifies a firewall cause. Android
+active-peer shutdown remains unverified until a peer-connected Flip7 process
+exits cleanly and the persistent daemon processes are confirmed untouched.
+
+### Linux active-peer shutdown verification (2026-10-11)
+
+The shutdown hang was in the application adapter's concurrent use of a libzt
+socket: libp2p may read, write, and close a connection from different
+goroutines, while libzt's lwIP build has `LWIP_NETCONN_FULLDUPLEX` and
+`LWIP_NETCONN_SEM_PER_THREAD` disabled. Enabling lwIP's alpha full-duplex mode
+in the vendored library would also require per-thread API semaphore hooks and
+safe mailbox wake-and-drain behavior in its Unix `sys_arch.c`; toggling those
+options alone would be unsafe.
+
+The Go adapter now uses short socket-operation timeouts and serializes each
+libzt C socket call, while retaining concurrent Go `Read` and `Write` callers.
+Its listener accept loop is nonblocking and joined before teardown. This keeps
+the library's existing socket configuration and avoids concurrent C calls on
+the same socket.
+
+Verification used two disposable Linux `thruholdd` processes with fresh world
+and ZeroTier state directories. Both joined network `e3918db4832a3056`. The
+second bootstrapped to the first at its ZeroTier managed IPv4 address
+`172.22.161.174`, on the Central-allowed TCP port `42901`; its own local
+listener used a separate port. Both `/healthz` endpoints reported one live
+DHT peer. This exercised the libzt-backed dial path and active-peer shutdown,
+but used two processes on the same host and does not prove cross-host,
+independent-NAT reachability. SIGTERM shut down each daemon with exit status
+0. No SIGQUIT or forced kill was needed. A separate host-LAN bootstrap also
+exited cleanly, but the managed-IPv4 run is the stronger libzt-path check.
+
+This result does not presently justify modifying libzt itself. Revisit a
+library change only if broader tests expose a libzt defect the adapter cannot
+correctly handle. Focused ZeroTier tests and Linux amd64/Android arm64 builds
+pass, but active-peer shutdown on Android is still unverified. Cross-host
+overlay transport, NAT traversal, and Android runtime behavior remain separate
+validation gates.
+
+### Flip7 active-peer retry and host firewall evidence (2026-10-11)
+
+USB ADB reached the Flip7, and its existing Termux daemon processes were
+inspected but left untouched. The matching Android test binary and `libzt.so`
+were copied with resumable `rsync` into a new private `$PREFIX/tmp` directory;
+their SHA-256 values matched the external build artifacts. Before starting a
+new phone process, the disposable Linux peer timed out waiting for network
+configuration. `/var/log/fw.log` recorded its outbound ZeroTier root packets
+to UDP port `9993` as `SDROP` on interface `spod`. This attempt therefore did
+not reach the peer test or exercise Android shutdown. No firewall rules were
+changed. The existing `spod` drop policy remains intentional; route selection
+for this daemon test must be resolved separately before retrying Android
+active-peer shutdown.
