@@ -36,6 +36,18 @@ export const GPU = {
 		this.adapter = adapter;
 
 		const L = adapter.limits;
+		// These are the renderer's largest per-stage binding sets (ocean mip generation and haze).
+		// Reject a valid but undersized adapter here so backend selection can use WebGL before
+		// unsupported pipelines are created during scene setup.
+		const rendererLimits = {
+			maxSampledTexturesPerShaderStage: 21,
+			maxStorageTexturesPerShaderStage: 5,
+		};
+		const unsupported = Object.entries( rendererLimits )
+			.filter( ( [ name, required ] ) => ( L[ name ] ?? 0 ) < required )
+			.map( ( [ name, required ] ) => `${ name } ${ L[ name ] ?? 0 } < ${ required }` );
+		if ( unsupported.length ) throw new Error( `WebGPU adapter limits are insufficient for this renderer (${ unsupported.join( ', ' ) })` );
+
 		const want = {
 			maxSampledTexturesPerShaderStage: 32,
 			maxSamplersPerShaderStage: 16,
