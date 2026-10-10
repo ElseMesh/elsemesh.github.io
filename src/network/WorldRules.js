@@ -21,6 +21,9 @@ export const SUPPORTED_WORLD_FEATURES = new Set( [
 export const SUPPORTED_PHYSICS_PROFILES = new Set( [ 'default', 'tidewater-default' ] );
 export const DEFAULT_WORLD_MOVEMENT = Object.freeze( { walkSpeed: 3, sprintSpeed: 6.2, jumpSpeed: 4.6 } );
 export const DEFAULT_VEHICLE_POLICY = Object.freeze( { enabled: false } );
+// Fixed complexity contract for tidewater.downeast-boat/1. Keep synchronized
+// with BoatModel.triangleCount and the worldd validator.
+export const DOWNEAST_BOAT_TRIANGLES = 46845;
 export const MAX_WORLD_PACKAGE_BYTES = 16 * 1024 * 1024 * 1024;
 
 const FEATURE_ID = /^tidewater\.[a-z0-9.-]+\/\d+$/;

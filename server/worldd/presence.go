@@ -16,6 +16,7 @@ import (
 const playerPresenceProtocol = "elsemesh.player-presence/1"
 const maxPresencePlayers = 128
 const presenceTTL = 10 * time.Second
+const downeastBoatTriangles = 46845 // tidewater.downeast-boat/1 complexity contract
 
 var presenceSessionPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 var presenceColorPattern = regexp.MustCompile(`^#[0-9a-f]{6}$`)
@@ -80,6 +81,34 @@ func validatePlayerPose(p *playerPose) error {
 	}
 	return nil
 }
+
+func (d *daemon) validateVehiclePresence(p *playerPose) error {
+	if p.Mode != "boat" && p.Mode != "deck" {
+		return nil
+	}
+	policy := d.world.Rules.VehiclePolicy
+	if policy == nil || !policy.Enabled {
+		return errors.New("vehicle_not_allowed")
+	}
+	if policy.MaxSpeed == nil || policy.MaxCombinedComplexity == nil {
+		return errors.New("vehicle_policy_invalid")
+	}
+	hasBoat := false
+	for _, component := range d.world.Components {
+		if component.Type == "tidewater.downeast-boat/1" {
+			hasBoat = true
+			break
+		}
+	}
+	if !hasBoat {
+		return errors.New("vehicle_unsupported")
+	}
+	if uint64(d.world.Rules.AvatarComplexity)+downeastBoatTriangles > uint64(*policy.MaxCombinedComplexity) {
+		return errors.New("vehicle_complexity_exceeded")
+	}
+	return nil
+}
+
 func (d *daemon) presenceRequest(request gatewayMessage, now time.Time) (peerResponse, error) {
 	if d.world.OwnerPeerID != d.host.ID().String() {
 		return peerResponse{}, errors.New("presence_owner_required")
@@ -92,6 +121,9 @@ func (d *daemon) presenceRequest(request gatewayMessage, now time.Time) (peerRes
 	}
 	if request.Type == "presence.update" {
 		if err := validatePlayerPose(request.Pose); err != nil {
+			return peerResponse{}, err
+		}
+		if err := d.validateVehiclePresence(request.Pose); err != nil {
 			return peerResponse{}, err
 		}
 	}

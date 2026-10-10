@@ -33,7 +33,7 @@ const _c5 = new THREE.Vector3();
 const _invQ = new THREE.Quaternion();
 const _dq = new THREE.Quaternion();
 
-// Rigid-body model of an 8.2 m, 3.2 t Downeast lobster boat (semi-displacement hull, full keel).
+// Rigid-body model of an 8.2 m, 3.2 t Downeast lobster boat (semi-displacement hull, full keel; 46,845 triangles in v1).
 //
 // Hydrostatics come from the hull model's buoyancy samples (waterplane patches, water heights
 // queried on the GPU). The samples are laid out as a slightly narrower / shorter "effective"

@@ -136,15 +136,14 @@ player.updateHostedWorld( 1 / 60 );
 assert.ok( [ ...player.position.toArray(), ...player.velocity.toArray(), ...camera.position.toArray() ].every( Number.isFinite ), 'first destination frame keeps all motion and camera coordinates finite' );
 assert.ok( Math.abs( player.velocity.y - ( 4.6 - 9.81 * 0.5 / 60 ) ) < 1e-9, 'destination physics continues the jump with its own gravity' );
 
-const vehicleModel = { traverse( visit ) { visit( { isMesh: true, geometry: { attributes: { position: { count: 300 } }, drawRange: { start: 0, count: Infinity } } } ); } };
 const vehicleGate = Object.assign( Object.create( App.prototype ), {
-	player: { mode: 'boat' }, activeHostedBoat: { boat: { controller: {}, model: { group: vehicleModel } } },
+	player: { mode: 'boat' }, activeHostedBoat: { boat: { controller: {} } },
 } );
-const acceptingWorld = { manifest: { rules: { avatarComplexity: 200, vehiclePolicy: { enabled: true, maxSpeed: 8, maxCombinedComplexity: 500 } }, components: [ { type: 'tidewater.downeast-boat/1' } ] } };
+const acceptingWorld = { manifest: { rules: { avatarComplexity: 200, vehiclePolicy: { enabled: true, maxSpeed: 8, maxCombinedComplexity: 50000 } }, components: [ { type: 'tidewater.downeast-boat/1' } ] } };
 assert.deepEqual( vehicleGate.vehicleTransferStatus( acceptingWorld ), { allowed: true, maxSpeed: 8 }, 'destination accepts a vehicle within the combined triangle budget' );
-acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 299;
+acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 47044;
 assert.equal( vehicleGate.vehicleTransferStatus( acceptingWorld ).allowed, false, 'destination denies a vehicle above the combined triangle budget' );
-acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 500;
+acceptingWorld.manifest.rules.vehiclePolicy.maxCombinedComplexity = 50000;
 acceptingWorld.manifest.components = [];
 assert.equal( vehicleGate.vehicleTransferStatus( acceptingWorld ).allowed, false, 'destination denies transfer without a compatible boat berth' );
 

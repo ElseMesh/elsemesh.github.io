@@ -25,6 +25,10 @@ Cross-world transfer is opt-in at the destination. Set `rules.vehiclePolicy` to
 `{"enabled":true,"maxSpeed":8,"maxCombinedComplexity":100000}` and include a
 `tidewater.downeast-boat/1` component with a valid berth. The bundled client maps
 boat pose and motion through the portal, restores helm or deck mode, and enforces
-the destination speed ceiling. A destination that rejects the vehicle or exceeds
-its combined avatar-plus-boat triangle budget holds the visitor at the threshold
-and hides an open preview. See [portal authoring](../portal-authoring.md#vehicle-entry-rules).
+the destination speed ceiling. The signed v1 boat complexity is 46,845 triangles;
+the client and `worldd` verify the budget against that versioned value. The owner
+daemon also rejects boat/deck presence when the destination refuses the vehicle,
+lacks a compatible berth, or exceeds the combined avatar-plus-boat budget. A
+destination that rejects the vehicle holds the visitor at the threshold and hides
+an open preview. Presence admission is not authoritative physics. See
+[portal authoring](../portal-authoring.md#vehicle-entry-rules).

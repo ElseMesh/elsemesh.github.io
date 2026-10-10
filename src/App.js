@@ -79,7 +79,7 @@ import { updateWorldPackageLOD, appendWorldPackageAssets, disposeWorldPackage, l
 import { HostedBoat } from './network/HostedBoat.js';
 import { selectWorldComponentsForView, selectWorldObjectsForView } from './network/WorldStreaming.js';
 import { portalRouteFromPosition, crossedPortalPlane, mapPortalPlayerState, mapPortalVehicleState } from './network/PortalHandoff.js';
-import { vehiclePolicy } from './network/WorldRules.js';
+import { DOWNEAST_BOAT_TRIANGLES, vehiclePolicy } from './network/WorldRules.js';
 import { WorldPresenceSession } from './network/WorldPresenceSession.js';
 import { WorldPortalView } from './network/WorldPortalView.js';
 import { RenderLoadLOD } from './network/RenderLoadLOD.js';
@@ -1208,7 +1208,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		const policy = vehiclePolicy( destinationConnector.manifest.rules );
 		if ( ! policy.enabled ) return { allowed: false, reason: 'This ThruHold does not accept vehicles' };
 		if ( ! destinationConnector.manifest.components.some( ( component ) => component.type === 'tidewater.downeast-boat/1' ) ) return { allowed: false, reason: 'This ThruHold has no compatible boat berth' };
-		const combinedComplexity = destinationConnector.manifest.rules.avatarComplexity + boatTriangleCount( this.activeHostedBoat.boat.model.group );
+		const combinedComplexity = destinationConnector.manifest.rules.avatarComplexity + DOWNEAST_BOAT_TRIANGLES;
 		if ( combinedComplexity > policy.maxCombinedComplexity ) return { allowed: false, reason: 'This vehicle exceeds the ThruHold complexity limit' };
 		return { allowed: true, maxSpeed: policy.maxSpeed };
 	}
@@ -1530,19 +1530,6 @@ function readVegetationPlacements( connector, component ) {
 	const bytes = connector.assets.get( component.placementAssetId );
 	if ( ! bytes ) throw new Error( `Vegetation component ${component.id} is missing its placement asset` );
 	return decodeVegetationPlacements( bytes, component.seed );
-}
-
-function boatTriangleCount( root ) {
-	let triangles = 0;
-	root.traverse( ( object ) => {
-		const geometry = object.geometry;
-		if ( ! object.isMesh || ! geometry?.attributes?.position ) return;
-		const available = geometry.index?.count ?? geometry.attributes.position.count;
-		const start = geometry.drawRange?.start ?? 0;
-		const count = Number.isFinite( geometry.drawRange?.count ) ? geometry.drawRange.count : available - start;
-		triangles += Math.floor( Math.max( 0, Math.min( available - start, count ) ) / 3 );
-	} );
-	return triangles;
 }
 
 function componentAssetIDs( component ) {

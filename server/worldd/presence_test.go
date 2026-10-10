@@ -82,6 +82,43 @@ func TestPresenceLimitsExpiryAndIdentity(t *testing.T) {
 		t.Fatal("cache node accepted live authority")
 	}
 }
+
+func TestPresenceEnforcesSignedVehicleAdmissionPolicy(t *testing.T) {
+	d := presenceTestDaemon(t)
+	now := time.Now()
+	update := func(mode string, sequence uint64) error {
+		pose := presenceTestPose()
+		pose.Mode = mode
+		pose.Sequence = sequence
+		request := gatewayMessage{Type: "presence.update", WorldID: d.world.WorldID, Pose: pose}
+		session, err := newPresenceSession()
+		if err != nil {
+			return err
+		}
+		bindPresenceRequest(&request, d.host.ID().String(), session)
+		_, err = d.presenceRequest(request, now.Add(time.Duration(sequence)*time.Second))
+		return err
+	}
+	if err := update("boat", 1); err == nil || err.Error() != "vehicle_not_allowed" {
+		t.Fatalf("vehicle mode should require destination opt-in, got %v", err)
+	}
+	maxSpeed := 8.0
+	maxComplexity := uint32(66844)
+	d.world.Rules.VehiclePolicy = &vehiclePolicy{Enabled: true, MaxSpeed: &maxSpeed, MaxCombinedComplexity: &maxComplexity}
+	d.world.Rules.AvatarComplexity = 20000
+	if err := update("deck", 2); err == nil || err.Error() != "vehicle_unsupported" {
+		t.Fatalf("world without a compatible berth should reject vehicle mode, got %v", err)
+	}
+	d.world.Components = []worldComponent{{Type: "tidewater.downeast-boat/1"}}
+	if err := update("boat", 3); err == nil || err.Error() != "vehicle_complexity_exceeded" {
+		t.Fatalf("vehicle above signed complexity budget should be rejected, got %v", err)
+	}
+	maxComplexity = 66845
+	if err := update("boat", 4); err != nil {
+		t.Fatalf("vehicle at signed complexity budget should be admitted: %v", err)
+	}
+}
+
 func TestBrowserPresenceAcrossGatewayForwarding(t *testing.T) {
 	owner := presenceTestDaemon(t)
 	gateway := presenceTestDaemon(t)
