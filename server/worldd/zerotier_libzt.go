@@ -228,6 +228,13 @@ func (z *libztRuntime) startBridgeListener(ctx context.Context, addressText stri
 		C.zts_close(C.int(fd))
 		return fmt.Errorf("libzt TCP listen failed (%d)", code)
 	}
+	// libzt's blocking accept does not wake reliably when zts_close is called
+	// from another goroutine. A receive timeout bounds cancellation latency and
+	// lets the accept loop observe ctx before the listener is closed.
+	if code := int(C.zts_set_recv_timeout(C.int(fd), 0, 250000)); code != 0 {
+		C.zts_close(C.int(fd))
+		return fmt.Errorf("libzt TCP accept timeout setup failed (%d)", code)
+	}
 	if family == C.ZTS_AF_INET {
 		z.ipv4Listener = fd
 	} else {
@@ -274,8 +281,8 @@ func (z *libztRuntime) proxy(fd int) {
 }
 
 func (z *libztRuntime) Close() error {
-	z.closeListener()
 	z.closeOnce.Do(func() { C.zts_node_stop() })
+	z.closeListener()
 	return nil
 }
 

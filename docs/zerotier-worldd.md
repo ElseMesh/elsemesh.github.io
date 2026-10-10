@@ -530,3 +530,24 @@ The remaining tests are:
 6. Confirm operation while the Central API is unavailable.
 7. Check the game renderer and visual quality on the Flip7; the completed
    Android test above exercised only the headless daemon.
+
+### Listener shutdown check (2026-10-10)
+
+`libztRuntime.startBridgeListener` sets a 250 ms receive timeout on each
+libzt TCP listener. This bounds the blocking `zts_accept` call so the accept
+goroutine can observe context cancellation before listener teardown. Without a
+bounded accept wait, earlier Linux shutdown attempts remained blocked while
+`zts_close` waited on a listener with another goroutine inside `zts_accept`.
+
+A fresh Linux amd64 build joined the dedicated network using isolated temporary
+world and ZeroTier state. SIGTERM stopped that exact process within five
+seconds; it exited with the expected signal status and required neither SIGQUIT
+nor a forced kill. This verifies the current source-level workaround on Linux,
+but does not establish that libzt shutdown is correct on every platform. The
+focused `TestZeroTier*` suite passed, and the build helper completed for Linux
+amd64 and Android arm64 at revision `7d44d83`. The Android artifact is an
+AArch64 Android 26 executable, but the Flip7 became unreachable over SSH and
+USB ADB listed no device during follow-up, so Android runtime shutdown remains
+unverified. A targeted libzt change is not currently justified by the Linux
+result; revisit it if the bounded timeout fails on Android or other supported
+platforms.
