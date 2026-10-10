@@ -472,15 +472,27 @@ installation or persistent ZeroTier identity. No phone retry is possible
 while it is offline. The host could not read `/var/log/fw.log` because sudo
 required an unavailable password, so the cause of the timeout is unresolved.
 
+### Managed IPv4 Linux peer check (2026-10-10)
+
+Two Linux `thruholdd` processes using separate temporary world data and libzt
+identities joined the same public network. They received
+`172.22.248.107/16` and `172.22.159.170/16`; the first node listened on the
+flow-rule-allowed TCP port `42901`. The second bootstrapped to the first using
+`/ip4/172.22.248.107/tcp/42901`. Both local `/healthz` responses identified
+their expected process and reported `dhtPeers: 1`. This verifies a managed
+IPv4 TCP connection and bidirectional libp2p peer session on one Linux host.
+The test used the allowed port; an earlier attempt using `43901` was invalid
+because the Central policy does not allow that port. This does not validate
+separate hosts, distinct NATs, or internet relay behavior. Both daemon
+processes were stopped and their temporary state removed.
+
 The remaining tests are:
 
 1. Restore Flip7 connectivity to the host, diagnose the post-policy TCP dial,
-   then verify connection establishment and sustained bidirectional traffic
-   between two `thruholdd` nodes.
+   then verify the managed IPv4 path on the phone. The same-host Linux peer
+   session is now verified.
 2. Repeat from separate NATs and record whether the path is direct or relayed.
-3. Resume the IPv4 two-node test when the Flip7 is available; inspect firewall
-   logs/rules and verify bidirectional peer traffic over the advertised
-   managed IPv4 address.
+3. Inspect firewall logs/rules and verify the phone's managed IPv4 peer path.
 4. Verify the saved Central flow policy continues to allow the configured
    daemon ports and replies when those ports change.
 5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in
