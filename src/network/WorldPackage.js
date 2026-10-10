@@ -16,6 +16,9 @@ import { SRGBColorSpace } from '../engine/constants.js';
 import { standard } from '../materials/Materials.js';
 import { Vector3 } from '../engine/math/Vector3.js';
 import { Matrix4 } from '../engine/math/Matrix4.js';
+import { UniformBlock } from '../engine/gpu/Uniforms.js';
+import { Vector2 } from '../engine/math/Vector2.js';
+import { lodFadeModule } from '../materials/LODFade.js';
 import { villageMaterialRole } from './WorldVillageMaterial.js';
 
 const COMPONENTS = Object.freeze( {
@@ -95,8 +98,8 @@ export async function appendWorldPackageAssets( connector, root, assets, { signa
 
 }
 
-export function updateWorldPackageLOD( root, camera, loadBias = 0 ) {
-	for ( const controller of root?.userData?.worldPackage?.lodControllers?.values() || [] ) controller.update( camera, performance.now(), loadBias );
+export function updateWorldPackageLOD( root, camera, loadBias = 0, now = performance.now() ) {
+	for ( const controller of root?.userData?.worldPackage?.lodControllers?.values() || [] ) controller.update( camera, now, loadBias );
 }
 
 function installObjectLOD( connector, root, instance, object ) {
@@ -104,6 +107,7 @@ function installObjectLOD( connector, root, instance, object ) {
 	const levels = new Map();
 	const base = new Group();
 	for ( const child of [ ...instance.children ] ) base.add( child );
+	prepareObjectLODVisual( base );
 	instance.add( base ); levels.set( 0, base );
 	instance.userData.collisionRoot = base;
 	state.lodControllers ||= new Map();
@@ -122,11 +126,60 @@ function installObjectLOD( connector, root, instance, object ) {
 				if ( shared ) { disposeWorldPackage( source ); source = shared; }
 				else state.parsed.set( assetId, source );
 			}
-			const visual = cloneScene( source ); visual.visible = false;
+			const visual = cloneScene( source ); prepareObjectLODVisual( visual ); visual.visible = false;
 			instance.add( visual ); levels.set( level, visual );
 		} ),
-		showLevel: level => { for ( const [ index, visual ] of levels ) visual.visible = index === level; },
+		showLevel: level => {
+			for ( const [ index, visual ] of levels ) {
+				visual.visible = index === level;
+				setObjectLODFade( visual, 1, false );
+			}
+		},
+		showTransition: ( from, to, fade ) => {
+			for ( const [ index, visual ] of levels ) {
+				visual.visible = index === from || index === to;
+				if ( index === from ) setObjectLODFade( visual, fade, true );
+				else if ( index === to ) setObjectLODFade( visual, fade, false );
+			}
+		},
 	} ) );
+}
+
+function prepareObjectLODVisual( root ) {
+	const materials = new Map();
+	root.traverse( object => {
+		if ( ! object.material ) return;
+		const prepare = source => {
+			let material = materials.get( source );
+			if ( material ) return material;
+			material = source.clone();
+			const fields = Object.fromEntries( material.uniformBlock.order.map( name => {
+				const value = material.uniforms[ name ].value;
+				return [ name, [ material.uniformBlock.layout[ name ].typeStr, value?.clone ? value.clone() : value ] ];
+			} ) );
+			fields.lodFade = [ 'vec2f', new Vector2( 1, 0 ) ];
+			material.uniformBlock = new UniformBlock( `MaterialParams${ material.id }`, fields, { label: material.name } );
+			material.uniforms = material.uniformBlock.fields;
+			material.modules = [ ...material.modules, lodFadeModule ];
+			material.surface = `if ( ! lodFadeVisible( in.pixel, mat.lodFade.x, mat.lodFade.y > 0.5 ) ) { discard; }\n${ material.surface }`;
+			const fadeGuard = 'if ( ! lodFadeVisible( in.pixel, mat.lodFade.x, mat.lodFade.y > 0.5 ) ) { return false; }';
+			material.shadow = material.shadow
+				? `${ fadeGuard }\n${ material.shadow }`
+				: `${ fadeGuard }\nif ( mat.alphaTest > 0.0 ) { let s = surfaceOf( in ); if ( s.alpha < mat.alphaTest ) { return false; } }\nreturn true;`;
+			materials.set( source, material );
+			return material;
+		};
+		object.material = Array.isArray( object.material ) ? object.material.map( prepare ) : prepare( object.material );
+	} );
+}
+
+function setObjectLODFade( root, fade, outgoing ) {
+	root.traverse( object => {
+		for ( const material of Array.isArray( object.material ) ? object.material : [ object.material ] ) {
+			const uniform = material?.uniforms?.lodFade?.value;
+			if ( uniform ) uniform.set( fade, outgoing ? 1 : 0 );
+		}
+	} );
 }
 
 function addPortalFrames( root, portals ) {

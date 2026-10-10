@@ -9,6 +9,7 @@ import { appendWorldPackageAssets, disposeWorldPackage, loadWorldPackage, regist
 import { VILLAGE_MATERIAL_ROLES } from '../src/network/WorldVillageMaterial.js';
 import { validateWorldSource } from '../src/network/WorldSource.js';
 import { Colliders } from '../src/world/Colliders.js';
+import { standard } from '../src/materials/Materials.js';
 import { decodeVegetationPlacements } from '../src/network/VegetationPlacements.js';
 import { decodeReefPlacements } from '../src/network/ReefPlacements.js';
 import { decodeTerrainSurfaceAsset } from '../src/network/TerrainSurfaceAsset.js';
@@ -197,7 +198,7 @@ try {
 	assert.equal( progressiveRoot.children.find( ( object ) => object.userData.worldObjectId === terrainPreview.id ).visible, false, 'full terrain hides the preview when it arrives' );
 	assert.equal( progressiveRoot.children.find( ( object ) => object.userData.worldObjectId === source.objects[ 0 ].id ).visible, true, 'full terrain remains visible after replacement' );
 	const villagePayload = villageBytes.buffer.slice( villageBytes.byteOffset, villageBytes.byteOffset + villageBytes.byteLength );
-	const villageMaterials = Object.fromEntries( VILLAGE_MATERIAL_ROLES.map( role => [ role, { name: role, vertexColors: false, userData: {} } ] ) );
+	const villageMaterials = Object.fromEntries( VILLAGE_MATERIAL_ROLES.map( role => [ role, standard( { name: role } ) ] ) );
 	const villageConnector = { worldId: source.worldId, manifest: { rules: source.rules, assets: [ { id: villageObject.assetId, priority: 'visible' }, { id: villageObject.lods[ 0 ].assetId, priority: 'visible' } ], objects: [ villageObject ] }, getAsset: async id => firstAssets.get( id ) };
 	const villageRoot = await loadWorldPackage( villageConnector, { assets: new Map( [ [ villageObject.assetId, villagePayload ] ] ), materialContext: { materials: villageMaterials, textures: { bake() {} } } } );
 	let villageRuntimeMeshes = 0;

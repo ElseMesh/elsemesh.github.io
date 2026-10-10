@@ -21,9 +21,11 @@ export function selectObjectLOD(object, camera, previous = 0, loadBias = 0) {
 }
 
 export class WorldObjectLOD {
- constructor({object, loadLevel, showLevel, onError = error => console.warn('Object LOD unavailable', error)}) {
+ constructor({object, loadLevel, showLevel, showTransition = null, fadeDuration = 200, onError = error => console.warn('Object LOD unavailable', error)}) {
   this.object = object; this.loadLevel = loadLevel; this.showLevel = showLevel; this.onError = onError;
+  this.showTransition = showTransition; this.fadeDuration = fadeDuration;
   this.level = 0; this.desired = 0; this.loaded = new Set([0]); this.pending = new Map();
+  this.transition = null;
   this.controller = new AbortController(); this.retryAfter = new Map(); this.disposed = false;
  }
  update(camera, now = performance.now(), loadBias = 0) {
@@ -31,8 +33,9 @@ export class WorldObjectLOD {
   const level = selectObjectLOD(this.object, camera, this.desired, loadBias);
   this.desired = level;
   if (this.loaded.has(level)) {
-   this.showLevel(level); this.level = level; return;
+   this.#updateVisibleLevel(level, now); return;
   }
+  if (this.transition) this.#updateVisibleLevel(this.transition.to, now);
   if (this.pending.has(level) || now < (this.retryAfter.get(level) || 0)) return;
   const pending = Promise.resolve().then(() => this.loadLevel(level, this.controller.signal)).then(() => {
    if (!this.disposed) this.loaded.add(level);
@@ -41,6 +44,34 @@ export class WorldObjectLOD {
    if (!this.disposed) { this.retryAfter.set(level, performance.now() + 5000); this.onError(error); }
   }).finally(() => this.pending.delete(level));
   this.pending.set(level,pending);
+ }
+ #updateVisibleLevel(level, now) {
+  if (!this.showTransition) {
+   this.showLevel(level); this.level = level; return;
+  }
+  if (!this.transition) {
+   if (level === this.level) return;
+   this.transition = { from: this.level, to: level, start: now, initial: 0 };
+  } else if (level === this.transition.from) {
+   const progress = this.#progress(now);
+   this.transition = { from: this.transition.to, to: this.transition.from, start: now, initial: 1 - progress };
+  } else if (level !== this.transition.to) {
+   // Finish the current blend before choosing another target. This keeps both visible
+   // variants complementary if the camera crosses a second threshold mid-transition.
+  }
+  const progress = this.#progress(now);
+  const { from, to } = this.transition;
+  this.showTransition(from, to, progress);
+  if (progress >= 1) {
+   this.level = to;
+   this.transition = null;
+   this.showLevel(to);
+  }
+ }
+ #progress(now) {
+  const transition = this.transition;
+  const elapsed = Math.max(0, now - transition.start) / Math.max(1, this.fadeDuration);
+  return Math.min(1, transition.initial + (1 - transition.initial) * elapsed);
  }
  dispose() { if (this.disposed) return; this.disposed = true; this.controller.abort(new DOMException('World unloaded','AbortError')); }
 }

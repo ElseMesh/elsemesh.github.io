@@ -1,8 +1,9 @@
 # Reusable world-object levels of detail
 
-Status: signed contract and runtime switching implemented; the portable island
-village now has one authored lower-detail variant. Matched-view visual validation
-and authored variants for other large world objects remain outstanding.
+Status: signed contract, runtime switching, and complementary screen-door
+transitions implemented; the portable island village has one authored
+lower-detail variant. Matched-view visual validation and authored variants for
+other large world objects remain outstanding.
 Avatar distance LOD is implemented separately in `RemoteAvatar.js`.
 
 ## Existing renderer paths
@@ -64,7 +65,11 @@ with 12% hysteresis. Each package owns per-object controllers and persistent
 instance wrappers; visual levels are independently cached under verified hashes.
 Selected variants load on demand through `WorldConnector.getAsset`, keeping the
 current visual until acquisition completes. Completion cannot change visibility;
-the next explicit per-camera update does that. Disposal aborts variant downloads.
+the next explicit per-camera update starts a 200 ms screen-door cross-fade.
+Incoming and outgoing GLB materials receive per-instance fade uniforms, including
+alpha-tested color and shadow passes. If the camera reverses during a blend, the
+same two levels reverse their fade without a pop; additional target changes wait
+for the active blend to finish. Disposal aborts variant downloads.
 Heightfield collision always traverses the base visual, even if a lower level is
 currently displayed. Other collision descriptors remain unchanged.
 
@@ -80,8 +85,8 @@ fraction by up to four under maximum bias, but preserves the ordinary authored
 selection for objects occupying at least 25% of viewport height. Avatar distance thresholds
 shift gradually outside eight meters; nearby avatars always retain full detail.
 Each main or mapped portal camera selects against its own distance/projection;
-async downloads never switch visuals outside that explicit camera update. Transitions currently use hysteresis and a
-ready-level swap, without a dither cross-fade. The hosted island village declares
+async downloads never switch visuals outside that explicit camera update. Object
+variants use hysteresis and complementary screen-door dither cross-fades. The hosted island village declares
 one lower-detail level at a 0.45 viewport-height threshold. Its checked-in GLB is
 generated from the full-detail village GLB with
 `tools/blender/export-world-object-lod.py` under Blender 4.3.2; the export tool
@@ -108,7 +113,8 @@ into the signed content-addressed asset directory, so repeated exports do not
 need Blender and retain deterministic world-source and asset IDs.
 
 `test/world-object-lod.mjs` uses texture-free real GLBs to establish eight/four/two
-visible-triangle switching, near-view restoration, independent camera selection,
-unchanged collision, asynchronous race handling and Blender validation. It does
+visible-triangle levels, transition progression and reversal, near-view restoration,
+independent camera selection, unchanged collision, asynchronous race handling and
+Blender validation. It does
 not establish GPU-submitted counts or near/far image fidelity. Contract tests
 exercise invalid declarations and CLI hash import; Go tests cover signed validation.

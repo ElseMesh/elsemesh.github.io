@@ -25,7 +25,7 @@ assert.equal(portalRouteFromPosition({...portal,enabled:false},back).destination
 
 function exercise(previous,current,{crossing=false}={}) {
  const selected=[];
- const app={remoteWorldActive:true,worldConnector:{manifest:{portals:[portal]}},camera:{position:current.clone()},portalPreviousPosition:previous.clone(),portalPreparations:new Map([[portal.id,{status:'ready',root:{},connector:{}}],[backRoute.connectionKey,{status:'ready',root:{},connector:{}}]]),
+ const app={player:{mode:'walk'},remoteWorldActive:true,worldConnector:{manifest:{portals:[portal]}},camera:{position:current.clone()},portalPreviousPosition:previous.clone(),portalPreparations:new Map([[portal.id,{status:'ready',root:{},connector:{}}],[backRoute.connectionKey,{status:'ready',root:{},connector:{}}]]),vehicleTransferStatus(){return {allowed:true};},
  cancelUnneededPortalPreparations(key){this.selectedKey=key;},clearPortalPreview(){this.portalPreviewId=null;},portalView:{setTarget(root,route){selected.push(route);}},enterWorldPortal(route){selected.push(route);this.crossed=true;}};
  App.prototype.updateWorldPortals.call(app);
  assert.equal(!!app.crossed,crossing);
