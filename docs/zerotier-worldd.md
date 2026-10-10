@@ -404,6 +404,19 @@ incomplete. A Linux-only network-enabled smoke test did join the network as
 `077e7872b2` (`fc60:bbbd:e207:7e78:72b2::1`) and returned healthy local status,
 but had no bootstrap peer and therefore showed `dhtPeers: 0`.
 
+After that retry, two Linux `thruholdd` processes with fresh, isolated
+identities were run on the same host using the final `c303ce6` build-tree
+artifact. Both joined the dedicated network as `59eb492c1f`
+(`fc60:bbbd:e259:eb49:2c1f::1`) and `a88184b5e8`
+(`fc60:bbbd:e2a8:8184:b5e8::1`). The second daemon bootstrapped to the first
+using its 6PLANE `/ip6/.../tcp/42901` address, and both `/healthz` responses
+reported `dhtPeers: 1`. This verifies a successful libzt-backed daemon peer
+connection over 6PLANE on one host. It does not validate different hosts,
+separate-NAT traversal, or sustained world-content exchange. The processes and
+their test identities were stopped and removed after the check. The executable
+and `libzt.so` remained in the external `.build` tree; no build-to-source links
+were created.
+
 Use a network-enabled test shell for live libzt checks. A first attempt from the
 restricted build shell could not bring the node online; that was a sandbox
 network restriction, not evidence of a ZeroTier runtime failure. Source edits
