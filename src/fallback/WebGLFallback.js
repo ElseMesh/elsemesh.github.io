@@ -1,9 +1,11 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 import { TerrainData } from '../world/TerrainData.js';
 import { WorldConnector, worldLinkFromLocation } from '../network/WorldConnector.js';
 import { DEFAULT_APPEARANCE } from '../player/AvatarAppearance.js';
 import { portalRouteFromPosition } from '../network/PortalHandoff.js';
-import villageUrl from '../../worlds/island/lod-source/village-low.glb?url';
+import terrainUrl from '../../worlds/island/lod-source/terrain-full.glb?url';
+import villageUrl from '../../worlds/island/lod-source/village-full.glb?url';
 
 const PRESENCE_PROTOCOL = 'elsemesh.player-presence/2';
 
@@ -34,10 +36,35 @@ export class WebGLFallback {
 	async init( onProgress = () => {} ) {
 
 		const T = this.THREE;
-		this.scene.add( new T.HemisphereLight( 0xd9f1ff, 0x42513f, 2.2 ) );
-		const sun = new T.DirectionalLight( 0xfff0d2, 2.1 );
-		sun.position.set( - 120, 220, 80 );
+		this.renderer.toneMapping = T.ACESFilmicToneMapping;
+		this.renderer.toneMappingExposure = 0.9;
+		this.renderer.shadowMap.enabled = true;
+		this.renderer.shadowMap.type = T.PCFSoftShadowMap;
+		this.sky = new Sky();
+		this.sky.scale.setScalar( 450000 );
+		this.sky.material.uniforms.turbidity.value = 7;
+		this.sky.material.uniforms.rayleigh.value = 1.8;
+		this.sky.material.uniforms.mieCoefficient.value = 0.005;
+		this.sky.material.uniforms.mieDirectionalG.value = 0.82;
+		this.sky.renderOrder = - 1000;
+		const sunDirection = this._sunDirection( this.app.settings.timeOfDay );
+		this.sky.material.uniforms.sunPosition.value.copy( sunDirection );
+		this.scene.add( this.sky );
+		this.cloudLayer = this._makeCloudLayer( sunDirection );
+		this.scene.add( this.cloudLayer );
+		this.scene.add( new T.HemisphereLight( 0xd9f1ff, 0x42513f, 1.5 ) );
+		const sun = new T.DirectionalLight( 0xfff0d2, 2.4 );
+		sun.position.copy( sunDirection ).multiplyScalar( 500 );
+		sun.castShadow = true;
+		sun.shadow.mapSize.set( 1024, 1024 );
+		sun.shadow.camera.left = sun.shadow.camera.bottom = - 300;
+		sun.shadow.camera.right = sun.shadow.camera.top = 300;
+		sun.shadow.camera.near = 1;
+		sun.shadow.camera.far = 1400;
+		sun.shadow.bias = - 0.00008;
+		sun.shadow.normalBias = 0.025;
 		this.scene.add( sun );
+		this.sunDirection = sunDirection;
 		this._makeHUD();
 		if ( this.worldLink ) await this._loadHostedWorld( onProgress );
 		else await this._loadIsland( onProgress );
@@ -53,38 +80,170 @@ export class WebGLFallback {
 
 	}
 
+	_makeWater( geometry, seaLevel ) {
+
+		const T = this.THREE;
+		const material = new T.ShaderMaterial( {
+			uniforms: { uTime: { value: 0 }, uCameraPosition: { value: new T.Vector3() }, uSunDirection: { value: this.sunDirection.clone() } },
+			vertexShader: /* glsl */`
+				varying vec3 vWorldPosition;
+				void main() {
+					vec4 world = modelMatrix * vec4( position, 1.0 );
+					vWorldPosition = world.xyz;
+					gl_Position = projectionMatrix * viewMatrix * world;
+				}
+			`,
+			fragmentShader: /* glsl */`
+				uniform float uTime;
+				uniform vec3 uCameraPosition;
+				uniform vec3 uSunDirection;
+				varying vec3 vWorldPosition;
+				void main() {
+					vec2 p = vWorldPosition.xz;
+					float a = dot( p, vec2( 0.12, 0.08 ) ) + uTime * 0.52;
+					float b = dot( p, vec2( -0.07, 0.15 ) ) - uTime * 0.37;
+					float c = dot( p, vec2( 0.21, -0.16 ) ) + uTime * 0.24;
+					vec2 slope = vec2( 0.12, 0.08 ) * cos( a ) * 0.48 + vec2( -0.07, 0.15 ) * cos( b ) * 0.26 + vec2( 0.21, -0.16 ) * cos( c ) * 0.10;
+					vec3 normal = normalize( vec3( -slope.x, 1.0, -slope.y ) );
+					vec3 viewDirection = normalize( uCameraPosition - vWorldPosition );
+					vec3 reflectionDirection = reflect( -viewDirection, normal );
+					float fresnel = 0.055 + 0.65 * pow( 1.0 - max( dot( normal, viewDirection ), 0.0 ), 5.0 );
+					vec3 sky = mix( vec3( 0.12, 0.34, 0.43 ), vec3( 0.34, 0.59, 0.70 ), smoothstep( -0.08, 0.75, reflectionDirection.y ) );
+					vec3 water = mix( vec3( 0.012, 0.10, 0.15 ), vec3( 0.025, 0.23, 0.28 ), 0.5 + 0.5 * sin( a * 0.35 + b * 0.2 ) );
+					vec3 reflected = mix( water, sky, fresnel );
+					vec3 sunReflection = reflect( -normalize( uSunDirection ), normal );
+					float glint = pow( max( dot( viewDirection, sunReflection ), 0.0 ), 96.0 );
+					float ripple = 0.5 + 0.5 * sin( a * 2.0 + sin( b ) );
+					reflected += vec3( 1.0, 0.83, 0.60 ) * glint * ( 0.12 + 0.45 * ripple );
+					gl_FragColor = vec4( reflected, 1.0 );
+					#include <tonemapping_fragment>
+					#include <colorspace_fragment>
+				}
+			`,
+			side: T.DoubleSide,
+			depthWrite: true,
+		} );
+		const water = new T.Mesh( geometry, material );
+		water.rotation.x = - Math.PI / 2;
+		water.position.y = seaLevel;
+		water.isWater = true;
+		water.onBeforeRender = ( renderer, scene, camera ) => material.uniforms.uCameraPosition.value.setFromMatrixPosition( camera.matrixWorld );
+		return water;
+
+	}
+
+	_makeCloudLayer( sunDirection ) {
+
+		const T = this.THREE;
+		const material = new T.ShaderMaterial( {
+			uniforms: { uTime: { value: 0 }, uSunDirection: { value: sunDirection.clone() } },
+			vertexShader: /* glsl */`
+				varying vec3 vDirection;
+				void main() {
+					vDirection = position;
+					vec4 clip = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+					gl_Position = clip.xyww;
+				}
+			`,
+			fragmentShader: /* glsl */`
+				uniform float uTime;
+				uniform vec3 uSunDirection;
+				varying vec3 vDirection;
+				float hashCloud( vec2 p ) {
+					p = fract( p * vec2( 123.34, 456.21 ) );
+					p += dot( p, p + 45.32 );
+					return fract( p.x * p.y );
+				}
+				float noiseCloud( vec2 p ) {
+					vec2 i = floor( p ), f = fract( p );
+					f = f * f * ( 3.0 - 2.0 * f );
+					return mix( mix( hashCloud( i ), hashCloud( i + vec2( 1.0, 0.0 ) ), f.x ),
+						mix( hashCloud( i + vec2( 0.0, 1.0 ) ), hashCloud( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
+				}
+				float cloudFbm( vec2 p ) {
+					float n = 0.0, a = 0.55;
+					for ( int i = 0; i < 4; i ++ ) {
+						n += a * noiseCloud( p );
+						p = mat2( 1.6, -1.2, 1.2, 1.6 ) * p;
+						a *= 0.5;
+					}
+					return n;
+				}
+				void main() {
+					vec3 dir = normalize( vDirection );
+					if ( dir.y < 0.055 ) discard;
+					vec2 p = dir.xz / max( dir.y + 0.14, 0.14 );
+					p = p * 3.1 + vec2( uTime * 0.022, -uTime * 0.006 );
+					float n = cloudFbm( p );
+					float band = smoothstep( 0.055, 0.16, dir.y ) * ( 1.0 - smoothstep( 0.72, 0.96, dir.y ) );
+					float alpha = smoothstep( 0.48, 0.64, n ) * band * 0.82;
+					if ( alpha < 0.008 ) discard;
+					float sun = max( dot( dir, normalize( uSunDirection ) ), 0.0 );
+					vec3 cloud = mix( vec3( 0.42, 0.48, 0.58 ), vec3( 1.45, 1.35, 1.12 ), 0.58 + 0.42 * sun );
+					gl_FragColor = vec4( cloud, alpha );
+					#include <tonemapping_fragment>
+					#include <colorspace_fragment>
+				}
+			`,
+			side: T.BackSide,
+			transparent: true,
+			depthWrite: false,
+			depthTest: true,
+			toneMapped: true,
+		} );
+		const clouds = new T.Mesh( new T.SphereGeometry( 1, 64, 32 ), material );
+		clouds.renderOrder = - 999;
+		clouds.frustumCulled = false;
+		return clouds;
+
+	}
+
+	_sunDirection( hours ) {
+
+		const T = this.THREE, phi = T.MathUtils.degToRad( 24 ), dec = T.MathUtils.degToRad( 6 ), H = T.MathUtils.degToRad( ( hours - 12 ) * 15 );
+		const east = - Math.cos( dec ) * Math.sin( H );
+		const north = Math.cos( phi ) * Math.sin( dec ) - Math.sin( phi ) * Math.cos( dec ) * Math.cos( H );
+		const up = Math.sin( phi ) * Math.sin( dec ) + Math.cos( phi ) * Math.cos( dec ) * Math.cos( H );
+		return new T.Vector3( east, up, - north ).normalize();
+
+	}
+
 	async _loadIsland( progress ) {
 
 		progress( 0.15, 'Building a WebGL terrain…' );
 		this.terrain = new TerrainData();
-		const T = this.THREE, divisions = 144, size = this.terrain.size;
-		const positions = [], colors = [], indices = [];
-		for ( let j = 0; j <= divisions; j ++ ) for ( let i = 0; i <= divisions; i ++ ) {
-
-			const x = - size / 2 + size * i / divisions, z = - size / 2 + size * j / divisions;
-			const h = this.terrain.heightAt( x, z );
-			positions.push( x, h, z );
-			const c = h < - 0.7 ? [ 0.35, 0.42, 0.34 ] : h < 3.5 ? [ 0.76, 0.68, 0.48 ] : h < 28 ? [ 0.25, 0.39, 0.24 ] : [ 0.39, 0.38, 0.34 ];
-			colors.push( ...c );
-			if ( i < divisions && j < divisions ) {
-				const a = j * ( divisions + 1 ) + i, b = a + divisions + 1;
-				indices.push( a, b, a + 1, b, b + 1, a + 1 );
+		const T = this.THREE;
+		try {
+			const model = await this.loader.loadAsync( terrainUrl );
+			model.scene.traverse( object => { if ( object.isMesh ) object.receiveShadow = true; } );
+			this.scene.add( model.scene );
+		} catch ( error ) {
+			console.warn( 'WebGL fallback packaged terrain unavailable:', error );
+			const divisions = 144, size = this.terrain.size, positions = [], colors = [], indices = [];
+			const toLinear = value => value <= 0.04045 ? value / 12.92 : Math.pow( ( value + 0.055 ) / 1.055, 2.4 );
+			for ( let j = 0; j <= divisions; j ++ ) for ( let i = 0; i <= divisions; i ++ ) {
+				const x = - size / 2 + size * i / divisions, z = - size / 2 + size * j / divisions, h = this.terrain.heightAt( x, z );
+				positions.push( x, h, z );
+				const c = h < - 0.7 ? [ 0.35, 0.42, 0.34 ] : h < 3.5 ? [ 0.76, 0.68, 0.48 ] : h < 28 ? [ 0.25, 0.39, 0.24 ] : [ 0.39, 0.38, 0.34 ];
+				colors.push( toLinear( c[ 0 ] ), toLinear( c[ 1 ] ), toLinear( c[ 2 ] ) );
+				if ( i < divisions && j < divisions ) { const a = j * ( divisions + 1 ) + i, b = a + divisions + 1; indices.push( a, b, a + 1, b, b + 1, a + 1 ); }
 			}
-
+			const geometry = new T.BufferGeometry();
+			geometry.setAttribute( 'position', new T.Float32BufferAttribute( positions, 3 ) );
+			geometry.setAttribute( 'color', new T.Float32BufferAttribute( colors, 3 ) );
+			geometry.setIndex( indices ); geometry.computeVertexNormals();
+			const terrain = new T.Mesh( geometry, new T.MeshStandardMaterial( { vertexColors: true, roughness: 0.94, side: T.DoubleSide } ) );
+			terrain.receiveShadow = true; this.scene.add( terrain );
 		}
-		const geometry = new T.BufferGeometry();
-		geometry.setAttribute( 'position', new T.Float32BufferAttribute( positions, 3 ) );
-		geometry.setAttribute( 'color', new T.Float32BufferAttribute( colors, 3 ) );
-		geometry.setIndex( indices );
-		geometry.computeVertexNormals();
-		this.scene.add( new T.Mesh( geometry, new T.MeshStandardMaterial( { vertexColors: true, roughness: 0.94, side: T.DoubleSide } ) ) );
-		const water = new T.Mesh( new T.PlaneGeometry( 4000, 4000 ), new T.MeshStandardMaterial( { color: 0x388da5, roughness: 0.32, metalness: 0.08 } ) );
-		water.rotation.x = - Math.PI / 2;
-		water.position.y = - 0.15;
-		this.scene.add( water );
+		this.scene.add( this._makeWater( new T.PlaneGeometry( 4000, 4000 ), - 0.15 ) );
 		progress( 0.55, 'Loading the island village…' );
 		try {
 			const model = await this.loader.loadAsync( villageUrl );
+			model.scene.traverse( object => {
+				if ( ! object.isMesh ) return;
+				object.castShadow = true;
+				object.receiveShadow = true;
+			} );
 			this.scene.add( model.scene );
 			this._collectBlockers( model.scene );
 		} catch ( error ) {
@@ -181,11 +340,10 @@ export class WebGLFallback {
 		const T = this.THREE;
 		for ( const component of components ) {
 			if ( component.type === 'tidewater.island-ocean/1' ) {
-				const water = new T.Mesh( new T.PlaneGeometry( 4000, 4000 ), new T.MeshStandardMaterial( { color: 0x388da5, roughness: 0.35 } ) );
-				water.rotation.x = - Math.PI / 2; water.position.y = this.app.worldConnector?.manifest?.rules?.seaLevel ?? - 4.5; this.scene.add( water );
+				this.scene.add( this._makeWater( new T.PlaneGeometry( 4000, 4000 ), this.app.worldConnector?.manifest?.rules?.seaLevel ?? - 4.5 ) );
 			} else if ( component.type === 'tidewater.water-body/1' ) {
-				const water = new T.Mesh( new T.CircleGeometry( component.extent, 64 ), new T.MeshStandardMaterial( { color: 0x388da5, roughness: 0.35, side: T.DoubleSide } ) );
-				water.rotation.x = - Math.PI / 2; water.position.set( component.center[ 0 ], this.app.worldConnector?.manifest?.rules?.seaLevel ?? 0, component.center[ 1 ] ); this.scene.add( water );
+				const water = this._makeWater( new T.CircleGeometry( component.extent, 64 ), this.app.worldConnector?.manifest?.rules?.seaLevel ?? 0 );
+				water.position.x = component.center[ 0 ]; water.position.z = component.center[ 1 ]; this.scene.add( water );
 			}
 		}
 
@@ -304,6 +462,10 @@ export class WebGLFallback {
 		const now = performance.now(), dt = Math.min( 0.05, Math.max( 0, ( now - ( this.lastFrame || now ) ) / 1000 ) );
 		this.lastFrame = now;
 		const T = this.THREE, speed = this.keys.has( 'ShiftLeft' ) || this.keys.has( 'ShiftRight' ) ? 10 : 5;
+		this.sky.position.copy( this.camera.position );
+		this.cloudLayer.position.copy( this.camera.position );
+		this.cloudLayer.material.uniforms.uTime.value = now * 0.001;
+		for ( const object of this.scene.children ) if ( object.isWater ) object.material.uniforms.uTime.value = now * 0.001;
 		const forward = new T.Vector3( - Math.sin( this.yaw ), 0, - Math.cos( this.yaw ) );
 		const right = new T.Vector3( Math.cos( this.yaw ), 0, - Math.sin( this.yaw ) );
 		const move = new T.Vector3();

@@ -35,7 +35,9 @@ export class Engine {
 		this.container.appendChild( canvas );
 		this.canvas = canvas;
 		this.domElement = canvas;
+		const forceWebGL = new URLSearchParams( location.search ).get( 'renderer' ) === 'webgl';
 		const result = await selectBackend( {
+			forceWebGL,
 			initWebGPU: () => GPU.init( { canvas } ),
 			initWebGL: async () => {
 

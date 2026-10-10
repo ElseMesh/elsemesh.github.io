@@ -6,6 +6,19 @@ const three = await loadThreeModule();
 assert.equal( typeof three.WebGLRenderer, 'function', 'the dynamically loaded Three.js namespace exposes the named renderer export' );
 
 {
+	let webgpuStarted = false;
+	let webglStarted = false;
+	const selected = await selectBackend( {
+		forceWebGL: true,
+		initWebGPU: async () => { webgpuStarted = true; },
+		initWebGL: async () => { webglStarted = true; },
+	} );
+	assert.equal( webgpuStarted, false );
+	assert.equal( webglStarted, true );
+	assert.equal( selected.backend, 'webgl' );
+}
+
+{
 	const selected = await selectBackend( { initWebGPU: async () => {}, initWebGL: async () => assert.fail( 'WebGL must not initialize when WebGPU succeeds' ) } );
 	assert.deepEqual( selected, { backend: 'webgpu', fallbackReason: null } );
 }

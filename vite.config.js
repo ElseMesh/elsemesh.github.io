@@ -13,6 +13,7 @@ const commitShort = commitSha.slice( 0, 8 ).toLowerCase();
 export default defineConfig( {
 	// Relative asset paths let the client run at the GitHub Pages root and under /loz.
 	base: './',
+	resolve: { preserveSymlinks: true },
 	plugins: [ {
 		name: 'elsemesh-build-commit',
 		transformIndexHtml( html ) {

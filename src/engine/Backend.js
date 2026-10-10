@@ -1,6 +1,11 @@
 // Selects a rendering backend during device initialization only. Errors after this
 // function returns belong to the selected backend and are not silently retried.
-export async function selectBackend( { initWebGPU, initWebGL } ) {
+export async function selectBackend( { initWebGPU, initWebGL, forceWebGL = false } ) {
+
+	if ( forceWebGL ) {
+		await initWebGL();
+		return { backend: 'webgl', fallbackReason: 'WebGL was selected explicitly.' };
+	}
 
 	try {
 
