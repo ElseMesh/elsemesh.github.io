@@ -49,6 +49,16 @@ DNS inspection on 2026-10-02 found Namecheap nameservers, an apex parking addres
 `162.255.119.79` and `www` pointing to `parkingpage.namecheap.com`. The domain is
 not yet connected to Pages. Preserve unrelated DNS records, including email.
 
+Rechecked on 2026-10-11: `elsemesh.org` still resolves to `162.255.119.79` and
+HTTPS does not respond. `www.elsemesh.org` does not resolve in the local
+resolver. GitHub Pages serves the static client at `https://elsemesh.github.io/`,
+but `/healthz`, `/api/lookup`, and `/gateway` return 404 there; Pages is not a
+world gateway. No local `elsemesh-gateway` or Caddy service is active, and this
+host has no listener on TCP 80, 443, 5200, or 42901. Thus no public gateway or
+relay endpoint is currently deployed or available to test. The service and
+firewall examples below remain deployment instructions, not evidence of a
+running service.
+
 1. Verify the domain for the **ElseMesh organisation** in GitHub Pages settings
    using the organisation-provided TXT verification record.
 2. Set the repository Pages custom domain to `elsemesh.org` (Actions deployments

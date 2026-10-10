@@ -217,12 +217,14 @@ node and confirm another path still works.
 
 This repository supplies the daemon flags, a systemd/Caddy deployment example,
 and loopback circuit test; no deployed bootstrap, relay, gateway, DNS, TLS, or
-monitoring infrastructure exists yet. The deployment example has not been
-validated against a public host; run `caddy validate` after installing it on
-the target host. Caddy was not installed in the development environment, so
-its parser could not be run here. Public two-NAT relay traversal and
-browser-to-world traversal through a remotely deployed relay remain
-verification gates. The
+monitoring infrastructure exists yet. Rechecked 2026-10-11: GitHub Pages is
+reachable as a static client but its gateway routes return 404; `elsemesh.org`
+still resolves to the Namecheap parking address; and this development host has
+no gateway or relay listener. The deployment example has not been validated
+against a public host; run `caddy validate` after installing it on the target
+host. Caddy is not installed in this development environment, so its parser
+cannot be run here. Public two-NAT relay traversal and browser-to-world
+traversal through a remotely deployed relay remain verification gates. The
 mesh must work without the Central API; Central is only an administrative
 interface for the optional ZeroTier LAN. Bootstrap peers must use the
 ElseMesh-compatible DHT protocol prefix currently set to
