@@ -229,22 +229,36 @@ browser peer path.
 Android arm64 was built on Linux with NDK r29 (`29.0.14206865`), ABI
 `arm64-v8a`, and minimum API 26. The libzt configuration used
 `ZTS_NDK_ONLY=ON`, shared-library output, and disabled host-only tests and
-examples. Reproduce it with:
+examples. Run `tools/build-libzt-android.sh` from the ElseMesh source checkout
+to synchronize the adjacent libzt source into `libzt.build/elsemesh-source`
+and build from that mirror against the existing ZeroTierOne `exp3` checkout.
+Outputs go to `libzt.build/android-arm64-elsemesh-exp3`; the script rejects
+build paths inside ElseMesh, libzt, or ZeroTierOne source trees. It does not
+copy ZeroTierOne into `libzt/ext` or link a build tree to a source tree. CMake
+reads the existing ZeroTierOne checkout as an input and writes generated files
+only into the external build directory. Override `LIBZT_SOURCE_ROOT`,
+`ZEROTIERONE_SOURCE_ROOT`, `LIBZT_BUILD_ROOT`, `LIBZT_SOURCE_MIRROR`,
+`LIBZT_ANDROID_BUILD`, or `ANDROID_NDK_ROOT` for a different layout. The
+equivalent manual CMake commands are:
 
 ```sh
 NDK=/path/to/android-ndk
-cmake -S /path/to/libzt -B /path/to/libzt-android-arm64-build \
+BUILD_ROOT=/mnt/kingston/builds/rebroad/src/libzt.build
+mkdir -p "$BUILD_ROOT/elsemesh-source"
+cpto --no-lngit --nogit /path/to/libzt "$BUILD_ROOT/elsemesh-source"
+cmake -S "$BUILD_ROOT/elsemesh-source" -B "$BUILD_ROOT/android-arm64-elsemesh-exp3" \
   -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
   -DZTS_ZEROTIERONE_SOURCE_DIR=/path/to/ZeroTierOne \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 \
   -DZTS_NDK_ONLY=ON -DBUILD_SHARED_LIB=ON -DBUILD_STATIC_LIB=OFF \
   -DBUILD_HOST_SELFTEST=OFF -DBUILD_HOST_EXAMPLES=OFF \
   -DALLOW_INSTALL_TARGET=OFF -DZTS_DISABLE_CENTRAL_API=ON
-cmake --build /path/to/libzt-android-arm64-build --target zt-shared --parallel
+cmake --build "$BUILD_ROOT/android-arm64-elsemesh-exp3" --target zt-shared --parallel
 ```
 
 This build was validated against the ElseMesh owner's ZeroTierOne `exp3` fork
-at commit `be0d1923d88d62f7c9e9499d96a1fb541a870153`. Set
+at commit `be0d1923d88d62f7c9e9499d96a1fb541a870153` (including the Android
+thread-affinity fix). Set
 `ZTS_ZEROTIERONE_SOURCE_DIR` to the existing checkout; libzt reads its source
 directly and writes build outputs only under the external CMake build
 directory. No copy or symlink into `ext/ZeroTierOne` is needed. libzt detects

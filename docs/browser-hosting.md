@@ -129,7 +129,9 @@ HTTPS/WSS gateway from a network outside the developer machine.
 The gateway integration tests cover owner proof, replay rejection, provider
 lookup, signed manifest retrieval, declared asset range forwarding, chunk-size
 checks, and removal after disconnect. `go test ./...` and the Linux
-`thruholdd` build pass. The Android arm64 libzt build also ran on the Flip7:
-`--version` reported revision `2a89a63`, and two isolated `--print-node-id`
-starts reused the same identity. This did not join ZeroTier, exercise a public
-gateway, or verify Flip7 client rendering.
+`thruholdd` build pass. The Android arm64 libzt build from ElseMesh revision
+`0cfcde2`, linked to a libzt build using ZeroTierOne `exp3` commit `be0d1923d`,
+ran on the Flip7: `--version` reported that revision, and two isolated
+`--print-node-id` starts reused the same temporary identity. This did not join
+ZeroTier, exercise a public gateway, or verify Flip7 client rendering; the
+phone display was keyguard-locked during this check.

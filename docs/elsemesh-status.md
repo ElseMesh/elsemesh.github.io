@@ -88,12 +88,18 @@ needs signaling and STUN/TURN or gateway fallback. See
 [browser-hosting.md](browser-hosting.md) for the protocol and remaining checks.
 
 Browser-host registration and serving have loopback tests only. The Android
-arm64 libzt build from revision `2a89a63` ran on the Flip7: `--version` matched
-the build and two isolated `--print-node-id` runs reused the same identity.
-This did not join ZeroTier or verify browser rendering. The browser worker/UI,
-public HTTPS/WSS deployment, external-network tests, browser-host presence, and
-WebRTC are not implemented; normal browser world access still requires an
-HTTPS/WSS gateway connected to a standalone owner or authorized cache node.
+arm64 `libzt.so` was rebuilt from the existing libzt checkout against the
+ZeroTierOne `exp3` fork (`be0d1923d`) using
+`tools/build-libzt-android.sh`; CMake artifacts stayed in
+`/mnt/kingston/builds/rebroad/src/libzt.build`, with no build-to-source
+symlinks. `thruholdd` revision `0cfcde2` was rebuilt against that library and
+ran on the Flip7. Its reported revision matched, and two isolated
+`--print-node-id` starts reused the same temporary identity. The phone's
+keyguard is currently locked, so this did not verify client rendering; the
+daemon smoke also did not join ZeroTier. The browser worker/UI, public HTTPS/WSS
+deployment, external-network tests, browser-host presence, and WebRTC are not
+implemented; normal browser world access still requires an HTTPS/WSS gateway
+connected to a standalone owner or authorized cache node.
 
 ### 1. Complete the island as a portable example world
 
