@@ -312,6 +312,65 @@ func TestWorldProposalSubmissionRejectsMissingStaleRevokedAndNonOwnerCases(t *te
 	}
 }
 
+func TestWorldProposalSubmissionRequiresScopesForEachOperation(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	owner, member := testKey(t), testKey(t)
+	ownerID := peerIDForTest(t, owner.GetPublic())
+	worldID := "tw-world:proposal-scopes"
+	fingerprint, err := accountKeyFingerprint(member.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := signRoleRevocationsForProposalTest(t, owner, worldID, ownerID, 1, now.Add(-time.Minute), now.Add(10*time.Minute), nil, nil)
+	operations := map[string]json.RawMessage{
+		"content": json.RawMessage(`{"op":"world.update","fields":{"title":"Updated"}}`),
+		"portal":  json.RawMessage(`{"op":"portal.add","fields":{"id":"portal-1"}}`),
+	}
+	tests := []struct {
+		name       string
+		scopes     []string
+		operations []json.RawMessage
+		wantOK     bool
+	}{
+		{name: "content edit permits world edit", scopes: []string{"world.content.edit"}, operations: []json.RawMessage{operations["content"]}, wantOK: true},
+		{name: "portal manager permits portal edit", scopes: []string{"world.portals.manage"}, operations: []json.RawMessage{operations["portal"]}, wantOK: true},
+		{name: "content edit cannot edit portal", scopes: []string{"world.content.edit"}, operations: []json.RawMessage{operations["portal"]}},
+		{name: "portal manager cannot edit world", scopes: []string{"world.portals.manage"}, operations: []json.RawMessage{operations["content"]}},
+		{name: "mixed proposal needs both scopes", scopes: []string{"world.content.edit"}, operations: []json.RawMessage{operations["content"], operations["portal"]}},
+		{name: "both scopes permit mixed proposal", scopes: []string{"world.content.edit", "world.portals.manage"}, operations: []json.RawMessage{operations["content"], operations["portal"]}, wantOK: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			grant := worldRoleGrant{
+				Protocol: worldRoleGrantProtocol, WorldID: worldID, OwnerPeerID: ownerID,
+				GrantID: "grant_0123456789ab", Version: 1, AccountKeyFingerprint: fingerprint,
+				Scopes: test.scopes, IssuedAt: now.Add(-time.Minute).Unix(), ExpiresAt: now.Add(time.Hour).Unix(),
+			}
+			grantDocument, err := signDocument(worldRoleGrantProtocol, grant, owner)
+			if err != nil {
+				t.Fatal(err)
+			}
+			proposal, err := json.Marshal(worldProposalHeader{
+				Protocol: "elsemesh.world-proposal/1", WorldID: worldID,
+				SourceHash: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				Operations: test.operations,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			submission := makeSignedProposalSubmission(t, member, grantDocument, proposal)
+			d := &daemon{
+				world:     worldManifest{WorldID: worldID, OwnerPeerID: ownerID},
+				roleState: state, roleStateSerial: 1,
+			}
+			err = d.validateWorldProposalSubmission(submission, now)
+			if (err == nil) != test.wantOK {
+				t.Fatalf("validateWorldProposalSubmission() error = %v, wantOK %t", err, test.wantOK)
+			}
+		})
+	}
+}
+
 func proposalForTest(worldID, operation string) json.RawMessage {
 	return json.RawMessage(`{"protocol":"elsemesh.world-proposal/1","worldId":"` + worldID + `","sourceHash":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","operations":[{"op":"` + operation + `","fields":{"title":"A proposed title"}}]}`)
 }

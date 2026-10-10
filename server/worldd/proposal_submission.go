@@ -51,6 +51,32 @@ type worldProposalHeader struct {
 	Operations []json.RawMessage `json:"operations"`
 }
 
+func authorizeProposalOperations(scopes []string, operations []json.RawMessage) error {
+	required := make(map[string]struct{}, 2)
+	for _, raw := range operations {
+		var operation struct {
+			Op string `json:"op"`
+		}
+		if err := json.Unmarshal(raw, &operation); err != nil {
+			return errors.New("proposal contains an invalid operation")
+		}
+		switch operation.Op {
+		case "object.add", "object.update", "object.remove", "world.update":
+			required["world.content.edit"] = struct{}{}
+		case "portal.add", "portal.update", "portal.remove":
+			required["world.portals.manage"] = struct{}{}
+		default:
+			return errors.New("proposal contains an unsupported operation")
+		}
+	}
+	for scope := range required {
+		if !containsRoleScope(scopes, scope) {
+			return fmt.Errorf("role grant does not authorize %s", scope)
+		}
+	}
+	return nil
+}
+
 type queuedWorldProposal struct {
 	ID                    string `json:"id"`
 	AccountKeyFingerprint string `json:"accountKeyFingerprint"`
@@ -211,12 +237,15 @@ func readQueuedWorldProposal(path, id, worldID, ownerPeerID string) (queuedWorld
 	}
 	fingerprintBytes := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(fingerprintBytes[:])
-	if grant.AccountKeyFingerprint != fingerprint || !containsRoleScope(grant.Scopes, "world.content.edit") {
-		return item, errors.New("role grant does not authorize this account for content edits")
+	if grant.AccountKeyFingerprint != fingerprint {
+		return item, errors.New("role grant does not authorize this account")
 	}
 	var proposal worldProposalHeader
 	if err := decodeStrictJSON(submission.Proposal, &proposal); err != nil || proposal.Protocol != "elsemesh.world-proposal/1" || proposal.WorldID != worldID || !proposalSourceHashPattern.MatchString(proposal.SourceHash) || len(proposal.Operations) == 0 || len(proposal.Operations) > 1000 {
 		return item, errors.New("invalid proposal document")
+	}
+	if err := authorizeProposalOperations(grant.Scopes, proposal.Operations); err != nil {
+		return item, err
 	}
 	return queuedWorldProposal{ID: id, AccountKeyFingerprint: fingerprint, GrantID: grant.GrantID, SourceHash: proposal.SourceHash, OperationCount: len(proposal.Operations)}, nil
 }
@@ -360,8 +389,8 @@ func (d *daemon) validateWorldProposalSubmission(submission worldProposalSubmiss
 	if err != nil {
 		return fmt.Errorf("invalid owner role grant: %w", err)
 	}
-	if grant.AccountKeyFingerprint != fingerprint || !containsRoleScope(grant.Scopes, "world.content.edit") {
-		return errors.New("account key is not granted world.content.edit")
+	if grant.AccountKeyFingerprint != fingerprint {
+		return errors.New("role grant does not target this account")
 	}
 	d.roleStateMu.RLock()
 	if d.roleStateSerial == 0 {
@@ -391,18 +420,8 @@ func (d *daemon) validateWorldProposalSubmission(submission worldProposalSubmiss
 	if proposal.Protocol != "elsemesh.world-proposal/1" || proposal.WorldID != d.world.WorldID || !proposalSourceHashPattern.MatchString(proposal.SourceHash) || len(proposal.Operations) == 0 || len(proposal.Operations) > 1000 {
 		return errors.New("proposal must target this world and contain a bounded source-hash-bound operation list")
 	}
-	for _, raw := range proposal.Operations {
-		var operation struct {
-			Op string `json:"op"`
-		}
-		if err := json.Unmarshal(raw, &operation); err != nil {
-			return errors.New("proposal contains an invalid operation")
-		}
-		switch operation.Op {
-		case "object.add", "object.update", "object.remove", "portal.add", "portal.update", "portal.remove", "world.update":
-		default:
-			return errors.New("proposal contains an unsupported operation")
-		}
+	if err := authorizeProposalOperations(grant.Scopes, proposal.Operations); err != nil {
+		return err
 	}
 	unsigned := unsignedWorldProposalSubmission{
 		Protocol: submission.Protocol, AccountPublicKey: submission.AccountPublicKey,
