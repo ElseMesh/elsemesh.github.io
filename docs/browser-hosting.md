@@ -140,9 +140,11 @@ and every declared asset, check that the selected `node.key` matches the world
 owner, register through the challenge protocol, maintain heartbeats, and serve
 bounded asset ranges. `npm test` includes `test/browser-host-client.mjs`, which
 builds a temporary `thruholdd` profile and drives the actual worker against a
-mock WSS gateway. It checks owner-key matching, declared asset hashes, the
-nonce-bound signature, registration and heartbeat messages, and exact bytes
-for a requested asset range. The full test suite and Go `worldd` tests pass,
+live loopback `worldd` gateway. It checks owner-key matching, declared asset
+hashes, the nonce-bound signature accepted by the server, registration and
+heartbeat messages, and a visitor retrieving the signed manifest and exact
+asset bytes through the gateway. The separate `world-gateway-e2e.mjs` test
+covers the secure WSS proxy path. The full test suite and Go `worldd` tests pass,
 including serving the Example Island and cave as separate portal-linked
 worlds. These checks do not yet exercise the owner worker in a real browser
 against a deployed public WSS gateway or test a second browser fetching from

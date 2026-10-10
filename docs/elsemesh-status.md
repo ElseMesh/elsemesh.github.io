@@ -86,11 +86,13 @@ declared asset, checks `node.key` against the owner key, registers with a fresh
 challenge, maintains heartbeats, and serves bounded asset ranges. Hosted-world
 invites include the chosen gateway. The Go gateway enforces session and request
 limits. The focused browser-host worker test creates a temporary signed profile,
-drives the worker against a mock WSS gateway, verifies its owner proof and
-heartbeat, and checks exact asset-range bytes; it is part of `npm test`. The
-frontend build, full npm test suite, Go `worldd` tests, and loopback WSS gateway
-test passed for the current implementation. Go validation also covers the
-Example Island's `village-materials/2` component.
+drives the actual worker against a live loopback `worldd`, verifies its owner
+proof and heartbeat, and has a visitor fetch the signed manifest and asset
+bytes through the gateway; it is part of `npm test`. The separate
+`world-gateway-e2e.mjs` test covers the secure WSS proxy path. The frontend
+build, full npm test suite, Go `worldd` tests, and loopback WSS gateway test
+passed for the current implementation. Go validation also covers the Example
+Island's `village-materials/2` component.
 
 `deploy/systemd/elsemesh-gateway.service.example` and
 `deploy/caddy/elsemesh-gateway.Caddyfile.example` now provide a concrete

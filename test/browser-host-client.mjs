@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash, createPublicKey, verify } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { browserHostSocketURL } from '../src/network/BrowserHost.js';
@@ -19,6 +20,7 @@ const worldd = path.join( tempRoot, 'thruholdd-test' );
 const worldsDir = path.join( tempRoot, 'worlds' );
 const profile = 'browser-host-test';
 const profileDir = path.join( worldsDir, profile );
+const processes = [];
 const assetBytes = Buffer.from( 'browser-host-worker-verified-asset' );
 const assetID = `sha256:${createHash( 'sha256' ).update( assetBytes ).digest( 'hex' )}`;
 const source = createWorldSource( { worldId: 'tw-world:browser-host-worker-test', title: 'Browser host worker test' } );
@@ -34,27 +36,71 @@ const run = ( command, args, options = {} ) => {
 	return result.stdout.trim();
 };
 
-class MockWebSocket {
-	static OPEN = 1;
+class ObservedWebSocket extends globalThis.WebSocket {
+	static sockets = [];
 	constructor( url ) {
-		this.url = url;
-		this.readyState = 0;
+		super( url );
 		this.sent = [];
-		MockWebSocket.last = this;
-		queueMicrotask( () => { this.readyState = MockWebSocket.OPEN; this.onopen?.(); } );
+		this.frames = [];
+		this.addEventListener( 'message', event => this.frames.push( JSON.parse( event.data ) ) );
+		ObservedWebSocket.last = this;
+		ObservedWebSocket.sockets.push( this );
 	}
-	send( value ) { this.sent.push( JSON.parse( value ) ); }
-	receive( frame ) { this.onmessage?.( { data: JSON.stringify( frame ) } ); }
-	close() { this.readyState = 3; this.onclose?.(); }
+	send( value ) {
+		if ( typeof value === 'string' ) this.sent.push( JSON.parse( value ) );
+		return super.send( value );
+	}
 }
 
 const waitFor = async ( predicate, message ) => {
-	const until = Date.now() + 5000;
+	const until = Date.now() + 15000;
 	while ( Date.now() < until ) {
-		if ( predicate() ) return;
+		if ( await predicate() ) return;
 		await new Promise( resolve => setTimeout( resolve, 10 ) );
 	}
 	assert.fail( message );
+};
+
+const waitForHTTP = async ( url, child ) => waitFor( async () => {
+	if ( child.exitCode !== null ) assert.fail( `worldd exited before readiness:\n${child.output}` );
+	try { return ( await fetch( url, { signal: AbortSignal.timeout( 1000 ) } ) ).ok; }
+	catch { return false; }
+}, `${url} readiness` );
+
+const waitForFrame = async ( socket, predicate, message ) => {
+	await waitFor( () => socket.frames.some( predicate ), message );
+	const index = socket.frames.findIndex( predicate );
+	return socket.frames.splice( index, 1 )[ 0 ];
+};
+
+const unusedPort = async () => {
+	const server = net.createServer();
+	await new Promise( ( resolve, reject ) => server.listen( 0, '127.0.0.1', resolve ).once( 'error', reject ) );
+	const { port } = server.address();
+	await new Promise( ( resolve, reject ) => server.close( error => error ? reject( error ) : resolve() ) );
+	return port;
+};
+
+const startDaemon = ( binary, args ) => {
+	const child = spawn( binary, args, { stdio: [ 'ignore', 'pipe', 'pipe' ] } );
+	child.output = '';
+	child.stdout.setEncoding( 'utf8' ).on( 'data', value => { child.output += value; } );
+	child.stderr.setEncoding( 'utf8' ).on( 'data', value => { child.output += value; } );
+	processes.push( child );
+	return child;
+};
+
+const stopDaemon = async child => {
+	if ( ! child || child.exitCode !== null ) return;
+	await new Promise( resolve => {
+		const timer = setTimeout( resolve, 5000 );
+		child.once( 'exit', () => { clearTimeout( timer ); resolve(); } );
+		child.kill( 'SIGTERM' );
+	} );
+	if ( child.exitCode === null ) {
+		child.kill( 'SIGKILL' );
+		await new Promise( resolve => child.once( 'exit', resolve ) );
+	}
 };
 
 try {
@@ -66,6 +112,8 @@ try {
 	const sourcePath = path.join( tempRoot, 'world-source.json' );
 	const unsignedPath = path.join( tempRoot, 'world-unsigned.json' );
 	const manifestPath = path.join( tempRoot, 'world.json' );
+	const httpPort = await unusedPort();
+	const p2pPort = await unusedPort();
 	await writeFile( sourcePath, `${JSON.stringify( source, null, 2 )}\n` );
 	const ownerID = run( worldd, [ '--worlds-dir', worldsDir, '--world-profile', profile, '--print-node-id' ] );
 	run( process.execPath, [ path.join( root, 'tools/world-source-to-manifest.mjs' ), '--source', sourcePath, '--owner', ownerID, '--assets', path.join( profileDir, 'assets' ), '--out', unsignedPath ] );
@@ -74,53 +122,75 @@ try {
 	const key = await readFile( path.join( profileDir, 'node.key' ) );
 	const cleanKey = Uint8Array.from( key );
 	const fileMap = new Map( [ [ assetID, new File( [ assetBytes ], assetID ) ] ] );
+	const daemon = startDaemon( worldd, [ '--worlds-dir', worldsDir, '--world-profile', profile, '--manifest', manifestPath, '--p2p-port', String( p2pPort ), '--http', `127.0.0.1:${httpPort}`, '--dht-mode', 'client' ] );
+	await waitForHTTP( `http://127.0.0.1:${httpPort}/healthz`, daemon );
 	const originalWebSocket = globalThis.WebSocket;
 	const originalSelf = globalThis.self;
+	const originalPostMessage = globalThis.postMessage;
 	const originalSetInterval = globalThis.setInterval;
 	const originalClearInterval = globalThis.clearInterval;
 	let heartbeatCallback = null;
+	const heartbeatToken = {};
 	const messages = [];
-	globalThis.WebSocket = MockWebSocket;
-	globalThis.setInterval = callback => { heartbeatCallback = callback; return 1; };
-	globalThis.clearInterval = () => { heartbeatCallback = null; };
+	globalThis.WebSocket = ObservedWebSocket;
+	globalThis.setInterval = ( callback, delay, ...args ) => {
+		if ( delay === 15000 ) { heartbeatCallback = callback; return heartbeatToken; }
+		return originalSetInterval( callback, delay, ...args );
+	};
+	globalThis.clearInterval = timer => {
+		if ( timer === heartbeatToken ) { heartbeatCallback = null; return; }
+		return originalClearInterval( timer );
+	};
 	globalThis.self = globalThis;
 	globalThis.self.postMessage = message => messages.push( message );
 	try {
 		await import( `../src/network/BrowserHostWorker.js?test=${Date.now()}` );
-		globalThis.self.onmessage( { data: { type: 'start', document, key: cleanKey.slice().buffer, files: [ ...fileMap ], gateway: 'https://gateway.example.test' } } );
-		await waitFor( () => MockWebSocket.last, 'worker did not open its gateway socket' );
-		const socket = MockWebSocket.last;
-		assert.equal( socket.url, 'wss://gateway.example.test/browser-host' );
-		socket.receive( { type: 'host.challenge', nonce: Buffer.alloc( 32, 7 ).toString( 'base64url' ) } );
+		globalThis.self.onmessage( { data: { type: 'start', document, key: cleanKey.slice().buffer, files: [ ...fileMap ], gateway: `http://127.0.0.1:${httpPort}` } } );
+		await waitFor( () => ObservedWebSocket.last, 'worker did not open its gateway socket' );
+		const socket = ObservedWebSocket.last;
+		assert.equal( socket.url, `ws://127.0.0.1:${httpPort}/browser-host` );
+		const challenge = await waitForFrame( socket, frame => frame.type === 'host.challenge', 'worldd did not issue its browser-host challenge' );
 		await waitFor( () => socket.sent.some( frame => frame.type === 'host.register' ), 'worker did not register after the gateway challenge' );
 		const registration = socket.sent.find( frame => frame.type === 'host.register' );
 		const protobufPublicKey = Buffer.from( document.publicKey, 'base64' );
 		const publicKey = createPublicKey( { key: Buffer.concat( [ Buffer.from( '302a300506032b6570032100', 'hex' ), protobufPublicKey.subarray( 4 ) ] ), format: 'der', type: 'spki' } );
-		const proofMessage = Buffer.from( `elsemesh.browser-host/1\n${document.payload.worldId}\n${Buffer.alloc( 32, 7 ).toString( 'base64url' )}` );
+		const proofMessage = Buffer.from( `elsemesh.browser-host/1\n${document.payload.worldId}\n${challenge.nonce}` );
 		assert.equal( verify( null, proofMessage, publicKey, Buffer.from( registration.proof, 'base64' ) ), true, 'registration proof must verify with the signed world owner key' );
 		assert.equal( registration.document.signer, document.signer );
 		assert.equal( Object.hasOwn( registration, 'key' ), false, 'the gateway registration must not contain the owner private key' );
-		socket.receive( { type: 'host.registered', worldId: document.payload.worldId } );
+		await waitForFrame( socket, frame => frame.type === 'host.registered', 'worldd rejected the worker registration' );
 		await waitFor( () => messages.some( message => message.status === `Hosting ${document.payload.title}` ), 'worker did not enter the hosting state' );
 		assert.equal( typeof heartbeatCallback, 'function', 'worker must start a heartbeat after registration' );
 		heartbeatCallback();
 		assert.ok( socket.sent.some( frame => frame.type === 'host.heartbeat' && frame.worldId === document.payload.worldId ), 'worker must heartbeat its registered world' );
-		socket.receive( { type: 'host.request', worldId: document.payload.worldId, requestId: 'asset-request-1', request: { type: 'asset.get', worldId: document.payload.worldId, requestId: 'asset-request-1', assetId: assetID, offset: 0, length: assetBytes.length } } );
-		await waitFor( () => socket.sent.some( frame => frame.type === 'host.response' ), 'worker did not answer the declared asset request' );
-		const response = socket.sent.find( frame => frame.type === 'host.response' );
-		assert.equal( Buffer.from( response.response.chunk, 'base64' ).compare( assetBytes ), 0 );
-		assert.equal( response.response.assetId, assetID );
-		assert.equal( response.response.total, assetBytes.length );
+		const visitor = new ObservedWebSocket( `ws://127.0.0.1:${httpPort}/gateway` );
+		await waitFor( () => visitor.readyState === globalThis.WebSocket.OPEN, 'visitor gateway websocket did not open' );
+		visitor.send( JSON.stringify( { type: 'connect', worldId: document.payload.worldId, targetPeerId: ownerID } ) );
+		await waitForFrame( visitor, frame => frame.type === 'connected', 'gateway did not route the visitor to the browser-host session' );
+		visitor.send( JSON.stringify( { type: 'manifest.get', worldId: document.payload.worldId, requestId: 'manifest-request-1' } ) );
+		const manifestReply = await waitForFrame( visitor, frame => frame.requestId === 'manifest-request-1', 'visitor did not receive the hosted signed manifest' );
+		assert.equal( manifestReply.type, 'manifest' );
+		assert.equal( manifestReply.document.signature, document.signature );
+		visitor.send( JSON.stringify( { type: 'asset.get', worldId: document.payload.worldId, requestId: 'asset-request-1', assetId: assetID, offset: 0, length: assetBytes.length } ) );
+		const assetReply = await waitForFrame( visitor, frame => frame.requestId === 'asset-request-1', 'visitor did not receive the browser-hosted asset' );
+		assert.equal( assetReply.type, 'asset.chunk' );
+		assert.equal( Buffer.from( assetReply.chunk, 'base64' ).compare( assetBytes ), 0 );
+		assert.equal( assetReply.assetId, assetID );
+		assert.equal( assetReply.total, assetBytes.length );
+		visitor.close();
 		globalThis.self.onmessage( { data: { type: 'stop' } } );
 	} finally {
-		MockWebSocket.last?.close();
+		for ( const socket of ObservedWebSocket.sockets ) socket.close();
 		globalThis.WebSocket = originalWebSocket;
 		globalThis.setInterval = originalSetInterval;
 		globalThis.clearInterval = originalClearInterval;
+		if ( originalPostMessage === undefined ) delete globalThis.postMessage;
+		else globalThis.postMessage = originalPostMessage;
 		if ( originalSelf === undefined ) delete globalThis.self;
 		else globalThis.self = originalSelf;
 	}
-	console.log( 'Browser-host profile validation, challenge proof, heartbeat registration, and asset response passed' );
+	console.log( 'Browser-host worker registered with live worldd and served a signed manifest and verified asset through the visitor gateway' );
 } finally {
+	for ( const child of processes.reverse() ) await stopDaemon( child );
 	await rm( tempRoot, { recursive: true, force: true } );
 }
