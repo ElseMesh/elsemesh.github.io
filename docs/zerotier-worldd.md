@@ -20,9 +20,10 @@ range. On 2026-10-10, a disposable libzt `thruholdd` identity (`56497525c1`)
 also joined and received `172.22.2.36`, within the configured `/16`, plus its
 expected 6PLANE address. The host kernel's route lookup for `172.22.2.36`
 selected the ordinary `wlo1` default gateway (`192.168.20.1`), confirming that
-this userspace libzt address is not installed as a host OS route. `thruholdd`
-currently reports the managed IPv4 for diagnostics but does not advertise or
-use it for peer routing; this join did not test IPv4 peer traffic. The locally
+this userspace libzt address is not installed as a host OS route. The current
+implementation advertises and listens on both assigned managed IPv4 and
+6PLANE IPv6 addresses, and routes in-prefix IPv4 libp2p TCP dials through
+libzt. Live IPv4 peer connectivity remains unverified. The locally
 stored Legacy API token still returns HTTP 403; that blocks API reads but does
 not prevent checking the settings in Central's web UI.
 The Legacy API's `physicalAddress` is the IP address the member last spoke
@@ -34,8 +35,11 @@ operator override for testing; use the existing `xellent` network only when
 explicitly testing that separate `/24` LAN. The `/16` route can overlap with
 private networks on a user's device; inspect local routes before relying on
 managed IPv4. `thruholdd` reports an assigned managed IPv4 address in startup
-logs for diagnostics, but peer routing and advertised overlay addresses still
-use 6PLANE IPv6 only.
+logs, advertises its managed IPv4 and 6PLANE IPv6 addresses, and routes managed
+IPv4 TCP peer traffic through libzt. IPv4 routing is restricted to the actual
+prefix reported by libzt for the joined network; other IPv4 traffic uses the
+normal host dialer. Managed IPv4 can overlap a user's local routes, so prefer
+6PLANE where address ambiguity prevents reliable routing.
 
 The Legacy Central API token at `~/.config/zerotier/central-api-token` is an
 administration credential, not a runtime setting. Keep it owner-readable only
@@ -447,14 +451,36 @@ network restriction, not evidence of a ZeroTier runtime failure. Source edits
 remain under the source tree and binaries under the mirrored external build
 tree; the trees are copied/synchronized with `cpto`, not linked together.
 
+### Managed IPv4 implementation and live check (2026-10-10)
+
+`thruholdd` now reads the assigned IPv4 address and prefix from libzt, binds a
+libzt IPv4 TCP listener on the configured daemon port, advertises the resulting
+`/ip4/.../tcp/...` address, and uses libzt for TCP dials only when the IPv4
+destination lies inside that assigned prefix. The 6PLANE IPv6 listener and
+route remain enabled. Unit tests cover IPv4/IPv6 address announcements and
+invalid-address rejection. Linux amd64 and Android arm64 builds passed, and
+`go test -tags zerotier ./worldd` passed on Linux.
+
+In a disposable two-node check, Linux received `172.22.198.191/16` and Flip7
+received `172.22.205.137/16`; both also received 6PLANE addresses and reported
+both IPv4 and IPv6 TCP multiaddresses. Flip7's bootstrap attempt to the Linux
+managed IPv4 address on TCP `42901` timed out. This verifies assignment,
+listener startup, and address advertisement, but not IPv4 peer connectivity.
+The test ended when the Flip7 went offline. Its disposable test files remain
+under Termux's private temporary directory and did not replace the normal
+installation or persistent ZeroTier identity. No phone retry is possible
+while it is offline. The host could not read `/var/log/fw.log` because sudo
+required an unavailable password, so the cause of the timeout is unresolved.
+
 The remaining tests are:
 
 1. Restore Flip7 connectivity to the host, diagnose the post-policy TCP dial,
    then verify connection establishment and sustained bidirectional traffic
    between two `thruholdd` nodes.
 2. Repeat from separate NATs and record whether the path is direct or relayed.
-3. Add and test managed IPv4 support in libzt; current `thruholdd` uses 6PLANE
-   IPv6 only.
+3. Resume the IPv4 two-node test when the Flip7 is available; inspect firewall
+   logs/rules and verify bidirectional peer traffic over the advertised
+   managed IPv4 address.
 4. Verify the saved Central flow policy continues to allow the configured
    daemon ports and replies when those ports change.
 5. Test browser gateway/WebRTC access and relay fallback without ZeroTier in

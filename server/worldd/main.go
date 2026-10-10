@@ -398,13 +398,13 @@ func run() error {
 			stop()
 			_ = zeroTier.Close()
 		}()
-		address := zeroTier.Address()
-		ztTCP, parseErr := ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", address, *listenPort))
+		addresses := zeroTier.Addresses()
+		ztAddresses, parseErr := zeroTierMultiaddrs(addresses, *listenPort)
 		if parseErr != nil {
-			return fmt.Errorf("ZeroTier 6PLANE address: %w", parseErr)
+			return fmt.Errorf("ZeroTier address: %w", parseErr)
 		}
-		parsedAnnounceAddresses = append(parsedAnnounceAddresses, ztTCP)
-		log.Printf("ZeroTier node %s joined %s at %s", zeroTier.NodeID(), *zeroTierNetwork, address)
+		parsedAnnounceAddresses = append(parsedAnnounceAddresses, ztAddresses...)
+		log.Printf("ZeroTier node %s joined %s at %v", zeroTier.NodeID(), *zeroTierNetwork, addresses)
 	} else {
 		defer stop()
 	}

@@ -4,7 +4,13 @@ package main
 
 /*
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include <ZeroTierSockets.h>
+static int zt_ipv4_prefix(uint64_t net_id) {
+	struct zts_sockaddr_storage assigned;
+	if (zts_addr_get(net_id, ZTS_AF_INET, &assigned) != ZTS_ERR_OK) return -1;
+	return (int)ntohs(((struct zts_sockaddr_in*)&assigned)->sin_port);
+}
 static ssize_t zt_read_with_errno(int fd, void *buf, size_t len, int *err) {
 	ssize_t n = zts_read(fd, buf, len);
 	*err = (n < 0) ? zts_errno : 0;
@@ -48,9 +54,12 @@ type libztRuntime struct {
 	nodeID       uint64
 	address      net.IP
 	prefix       net.IPNet
+	ipv4         net.IP
+	ipv4Prefix   net.IPNet
 	port         int
 	closeOnce    sync.Once
 	listener     int
+	ipv4Listener int
 	listenerOnce sync.Once
 }
 
@@ -119,22 +128,27 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 			if expected == nil || !address.Equal(expected) {
 				return nil, errors.New("assigned ZeroTier IPv6 address does not match this network's 6PLANE address")
 			}
+			mask := net.CIDRMask(40, 128)
+			runtime := &libztRuntime{networkID: netID, nodeID: nodeID, address: address, prefix: net.IPNet{IP: address.Mask(mask), Mask: mask}, listener: -1, ipv4Listener: -1}
 			switch assigned := int(C.zts_addr_is_assigned(C.uint64_t(netID), C.ZTS_AF_INET)); assigned {
 			case 0:
 				log.Printf("ZeroTier managed IPv4 address: not assigned")
 			case 1:
 				if code := int(C.zts_addr_get_str(C.uint64_t(netID), C.ZTS_AF_INET, &raw[0], C.uint(C.ZTS_IP_MAX_STR_LEN))); code != 0 {
-					log.Printf("ZeroTier managed IPv4 address is assigned but unavailable (%d)", code)
-				} else if ipv4 := net.ParseIP(C.GoString(&raw[0])).To4(); ipv4 == nil {
-					log.Printf("ZeroTier managed IPv4 address is assigned but invalid")
-				} else {
-					log.Printf("ZeroTier managed IPv4 address: %s", ipv4)
+					return nil, fmt.Errorf("read assigned ZeroTier IPv4 address failed (%d)", code)
 				}
+				ipv4 := net.ParseIP(C.GoString(&raw[0])).To4()
+				prefixBits := int(C.zt_ipv4_prefix(C.uint64_t(netID)))
+				if ipv4 == nil || prefixBits < 1 || prefixBits > 32 {
+					return nil, errors.New("libzt returned an invalid managed ZeroTier IPv4 address or prefix")
+				}
+				ipv4Mask := net.CIDRMask(prefixBits, 32)
+				runtime.ipv4 = ipv4
+				runtime.ipv4Prefix = net.IPNet{IP: ipv4.Mask(ipv4Mask), Mask: ipv4Mask}
+				log.Printf("ZeroTier managed IPv4 address: %s/%d", ipv4, prefixBits)
 			default:
-				log.Printf("could not determine ZeroTier IPv4 assignment (%d)", assigned)
+				return nil, fmt.Errorf("could not determine ZeroTier IPv4 assignment (%d)", assigned)
 			}
-			mask := net.CIDRMask(40, 128)
-			runtime := &libztRuntime{networkID: netID, nodeID: nodeID, address: address, prefix: net.IPNet{IP: address.Mask(mask), Mask: mask}, listener: -1}
 			started = false
 			return runtime, nil
 		case 2:
@@ -151,20 +165,30 @@ func startZeroTier(networkID, storagePath string) (zeroTierRuntime, error) {
 	return nil, errors.New("timed out waiting for ZeroTier network configuration (check membership and 6PLANE settings)")
 }
 
-func (z *libztRuntime) Address() net.IP { return append(net.IP(nil), z.address...) }
-func (z *libztRuntime) NodeID() string  { return fmt.Sprintf("%010x", z.nodeID) }
+func (z *libztRuntime) Addresses() []net.IP {
+	addresses := []net.IP{append(net.IP(nil), z.address...)}
+	if z.ipv4 != nil {
+		addresses = append(addresses, append(net.IP(nil), z.ipv4...))
+	}
+	return addresses
+}
+func (z *libztRuntime) NodeID() string { return fmt.Sprintf("%010x", z.nodeID) }
 
 func (z *libztRuntime) Libp2pOptions() []libp2p.Option {
 	dialer := tcp.WithDialerForAddr(func(address ma.Multiaddr) (tcp.ContextDialer, error) {
-		ipText, err := address.ValueForProtocol(ma.P_IP6)
-		if err != nil {
-			return &net.Dialer{}, nil
+		if ipText, err := address.ValueForProtocol(ma.P_IP4); err == nil {
+			ip := net.ParseIP(ipText).To4()
+			if ip != nil && z.ipv4 != nil && z.ipv4Prefix.Contains(ip) {
+				return ztDialer{}, nil
+			}
 		}
-		ip := net.ParseIP(ipText)
-		if ip == nil || !z.prefix.Contains(ip) {
-			return &net.Dialer{}, nil
+		if ipText, err := address.ValueForProtocol(ma.P_IP6); err == nil {
+			ip := net.ParseIP(ipText)
+			if ip != nil && z.prefix.Contains(ip) {
+				return ztDialer{}, nil
+			}
 		}
-		return ztDialer{}, nil
+		return &net.Dialer{}, nil
 	})
 	return []libp2p.Option{
 		libp2p.Transport(tcp.NewTCPTransport, dialer),
@@ -177,13 +201,26 @@ func (z *libztRuntime) Libp2pOptions() []libp2p.Option {
 
 func (z *libztRuntime) StartBridge(ctx context.Context, port int) error {
 	z.port = port
-	address := C.CString(z.address.String())
+	if err := z.startBridgeListener(ctx, z.address.String(), C.ZTS_AF_INET6); err != nil {
+		return err
+	}
+	if z.ipv4 != nil {
+		if err := z.startBridgeListener(ctx, z.ipv4.String(), C.ZTS_AF_INET); err != nil {
+			z.closeListener()
+			return err
+		}
+	}
+	return nil
+}
+
+func (z *libztRuntime) startBridgeListener(ctx context.Context, addressText string, family C.int) error {
+	address := C.CString(addressText)
 	defer C.free(unsafe.Pointer(address))
-	fd := int(C.zts_socket(C.ZTS_AF_INET6, C.ZTS_SOCK_STREAM, C.ZTS_IPPROTO_TCP))
+	fd := int(C.zts_socket(family, C.ZTS_SOCK_STREAM, C.ZTS_IPPROTO_TCP))
 	if fd < 0 {
 		return fmt.Errorf("libzt TCP socket creation failed (%d)", fd)
 	}
-	if code := int(C.zts_bind(C.int(fd), address, C.ushort(port))); code != 0 {
+	if code := int(C.zts_bind(C.int(fd), address, C.ushort(z.port))); code != 0 {
 		C.zts_close(C.int(fd))
 		return fmt.Errorf("libzt TCP bind failed (%d)", code)
 	}
@@ -191,7 +228,11 @@ func (z *libztRuntime) StartBridge(ctx context.Context, port int) error {
 		C.zts_close(C.int(fd))
 		return fmt.Errorf("libzt TCP listen failed (%d)", code)
 	}
-	z.listener = fd
+	if family == C.ZTS_AF_INET {
+		z.ipv4Listener = fd
+	} else {
+		z.listener = fd
+	}
 	go func() {
 		<-ctx.Done()
 		z.closeListener()
@@ -243,6 +284,9 @@ func (z *libztRuntime) closeListener() {
 		if z.listener >= 0 {
 			C.zts_close(C.int(z.listener))
 		}
+		if z.ipv4Listener >= 0 {
+			C.zts_close(C.int(z.ipv4Listener))
+		}
 	})
 }
 
@@ -257,7 +301,11 @@ func (ztDialer) DialContext(ctx context.Context, _, address string) (net.Conn, e
 	if err != nil || port < 1 || port > 65535 {
 		return nil, errors.New("invalid ZeroTier TCP port")
 	}
-	fd := int(C.zts_socket(C.ZTS_AF_INET6, C.ZTS_SOCK_STREAM, C.ZTS_IPPROTO_TCP))
+	family := C.int(C.ZTS_AF_INET6)
+	if ip := net.ParseIP(host); ip != nil && ip.To4() != nil {
+		family = C.int(C.ZTS_AF_INET)
+	}
+	fd := int(C.zts_socket(family, C.ZTS_SOCK_STREAM, C.ZTS_IPPROTO_TCP))
 	if fd < 0 {
 		return nil, fmt.Errorf("libzt TCP socket creation failed (%d)", fd)
 	}
@@ -277,7 +325,7 @@ func (ztDialer) DialContext(ctx context.Context, _, address string) (net.Conn, e
 	if code := int(C.zts_connect(C.int(fd), cHost, C.ushort(port), C.int(timeout))); code != 0 {
 		C.zts_close(C.int(fd))
 		if ctx.Err() != nil {
-			return nil, fmt.Errorf("%w: libzt TCP connect to %s failed (%d)", ctx.Err(), address, code)
+			return nil, fmt.Errorf("libzt TCP connect to %s failed (%d): %w", address, code, ctx.Err())
 		}
 		return nil, fmt.Errorf("libzt TCP connect to %s failed (%d)", address, code)
 	}
