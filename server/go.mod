@@ -1,4 +1,4 @@
-module github.com/rebroad/tidewater/server
+module github.com/elsemesh/elsemesh.github.io/server
 
 go 1.24.6
 
