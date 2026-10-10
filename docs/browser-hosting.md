@@ -89,17 +89,12 @@ themselves provide a network route through NAT.
 
 ## Direct peer transport
 
-WebRTC data channels may later reduce gateway bandwidth when two browsers or a
-browser and a daemon can connect directly. This needs an implemented signaling
-exchange, ICE/STUN configuration, and a TURN or gateway relay fallback for
-networks where direct ICE fails. The invite or portal identifies the intended
-world; signaling exchanges temporary connection data and does not grant world
-access. The gateway-forwarded WebSocket path remains the compatibility path.
-
-WebRTC is not implemented in the current client. Do not describe browser-to-
-world direct WebRTC as a supported path until browser-engine tests prove
-signaling, authenticated channel setup, request/reply framing, disconnection,
-and relay fallback.
+Direct WebRTC is not implemented in the current client. The signaling,
+authentication, ICE, request framing, and gateway fallback contract is recorded
+in [browser-direct-webrtc.md](browser-direct-webrtc.md). Do not describe
+browser-to-world direct WebRTC as supported until browser-engine tests prove
+that complete path. The gateway-forwarded WebTransport/WebSocket path remains
+the current compatibility path.
 
 ## Security and lifecycle requirements
 
