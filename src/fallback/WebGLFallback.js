@@ -286,7 +286,7 @@ export class WebGLFallback {
 			const w = window.innerWidth, h = window.innerHeight;
 			this.camera.aspect = w / Math.max( 1, h );
 			this.camera.updateProjectionMatrix();
-			this.renderer.setSize( w, h, false );
+			this.renderer.setSize( w, h );
 		};
 		window.addEventListener( 'keydown', this._keyDown );
 		window.addEventListener( 'keyup', this._keyUp );
