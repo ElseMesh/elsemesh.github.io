@@ -238,11 +238,14 @@ loopback address such as the default `127.0.0.1:5200`. Then query a known
 curl 'http://127.0.0.1:5200/debug/zerotier/paths?peerId=0123456789'
 ```
 
-The endpoint returns the currently observed physical `IP/UDP-port` paths, or
-an empty list when the peer is known but has no active path. The endpoint is
-disabled by default; startup rejects it if the HTTP listener is not bound to a
-loopback IP. Requests also must arrive from loopback without proxy-forwarding
-headers and use a loopback Host value. Do not add this diagnostic path to a
+The endpoint returns the currently observed physical `IP/UDP-port` paths, an
+empty list when the peer is known but has no queryable direct path, or 404 when
+libzt does not know that peer. The endpoint is disabled by default; startup
+rejects it if the HTTP listener is not bound to a loopback IP. `/healthz`
+separately reports application connections as
+`libp2pPeers`; `dhtPeers` remains as a deprecated compatibility alias. Neither
+field reports ZeroTier peer/path status. Requests also must arrive from
+loopback without proxy-forwarding headers and use a loopback Host value. Do not add this diagnostic path to a
 public reverse-proxy allowlist: physical endpoint addresses are sensitive and
 ephemeral. This query observes ZeroTier's path only; it does not switch traffic
 to a different protocol.
@@ -254,12 +257,14 @@ Linux response contained duplicate RFC1918/local candidates; it did not reveal
 a public endpoint. On Flip7, the query returned HTTP 200 with an empty list for
 the Linux peer ID. This confirms that libzt had a peer record but no currently
 queryable direct physical endpoint for it; the result cannot distinguish
-relay-only transport from no direct path. Separately, `/healthz` reported
-`dhtPeers:1`, which counts ElseMesh/libp2p peers and is not ZeroTier peer or
-path status. The managed-address peer session is evidence of overlay-carried
-application traffic, but direct-vs-relayed physical transport remains
-unverified. Public Host and forwarded requests were rejected. These tests did
-not establish independent-NAT connectivity or direct-transport viability.
+relay-only transport from no direct path. That test build's `/healthz` reported
+`dhtPeers:1`, which counts ElseMesh/libp2p peers and is not ZeroTier path
+status. Current source exposes that count as `libp2pPeers` and retains
+`dhtPeers` as a deprecated compatibility alias. The managed-address peer
+session is evidence of overlay-carried application traffic, but direct-vs-
+relayed physical transport remains unverified. Public Host and forwarded
+requests were rejected. These tests did not establish independent-NAT
+connectivity or direct-transport viability.
 Temporary daemons, profiles, and ADB forwards were removed after the check;
 existing Flip7 daemons and display state were left alone.
 
