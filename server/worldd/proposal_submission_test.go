@@ -371,6 +371,59 @@ func TestWorldProposalSubmissionRequiresScopesForEachOperation(t *testing.T) {
 	}
 }
 
+func TestPortalOnlyGrantCanQueueAndExportPortalProposal(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	owner, member := testKey(t), testKey(t)
+	ownerID := peerIDForTest(t, owner.GetPublic())
+	worldID := "tw-world:portal-proposal"
+	fingerprint, err := accountKeyFingerprint(member.GetPublic())
+	if err != nil {
+		t.Fatal(err)
+	}
+	grant, err := signDocument(worldRoleGrantProtocol, worldRoleGrant{
+		Protocol: worldRoleGrantProtocol, WorldID: worldID, OwnerPeerID: ownerID,
+		GrantID: "grant_0123456789ab", Version: 1, AccountKeyFingerprint: fingerprint,
+		Scopes: []string{"world.portals.manage"}, IssuedAt: now.Add(-time.Minute).Unix(), ExpiresAt: now.Add(time.Hour).Unix(),
+	}, owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal := json.RawMessage(`{"protocol":"elsemesh.world-proposal/1","worldId":"tw-world:portal-proposal","sourceHash":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","operations":[{"op":"portal.add","fields":{"id":"portal-1"}}]}`)
+	submission := makeSignedProposalSubmission(t, member, grant, proposal)
+	inbox := filepath.Join(t.TempDir(), "proposals")
+	if err := os.Mkdir(inbox, 0700); err != nil {
+		t.Fatal(err)
+	}
+	d := &daemon{
+		world: worldManifest{WorldID: worldID, OwnerPeerID: ownerID}, key: owner,
+		roleState:       signRoleRevocationsForProposalTest(t, owner, worldID, ownerID, 1, now.Add(-time.Minute), now.Add(10*time.Minute), nil, nil),
+		roleStateSerial: 1, proposalDir: inbox,
+	}
+	body, err := json.Marshal(submission)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	d.handleWorldProposalSubmission(response, httptest.NewRequest(http.MethodPost, "/api/world/proposals", bytes.NewReader(body)))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("portal-only grant rejected: code=%d body=%s", response.Code, response.Body.String())
+	}
+	var reply struct {
+		ProposalID string `json:"proposalId"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	exported := filepath.Join(t.TempDir(), "portal-proposal.json")
+	if _, err := exportWorldProposal(inbox, reply.ProposalID, worldID, ownerID, exported); err != nil {
+		t.Fatalf("owner could not export portal-only proposal: %v", err)
+	}
+	var decoded worldProposalHeader
+	if err := decodeStrictJSONFile(exported, &decoded); err != nil || len(decoded.Operations) != 1 {
+		t.Fatalf("exported portal proposal is invalid: proposal=%+v err=%v", decoded, err)
+	}
+}
+
 func proposalForTest(worldID, operation string) json.RawMessage {
 	return json.RawMessage(`{"protocol":"elsemesh.world-proposal/1","worldId":"` + worldID + `","sourceHash":"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","operations":[{"op":"` + operation + `","fields":{"title":"A proposed title"}}]}`)
 }
