@@ -404,6 +404,16 @@ func run() error {
 		return signWorldRoleRevocationsFile(*signRoleRevocationsPath, *roleDocumentOut, world, state.roleStateSerial, key, time.Now())
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	var p2pHost host.Host
+	defer func() {
+		stop()
+		if zeroTier != nil {
+			_ = zeroTier.Close()
+		}
+		if p2pHost != nil {
+			_ = p2pHost.Close()
+		}
+	}()
 	if *zeroTierNetwork != "" {
 		if err := migrateLegacyZeroTierStorage(filepath.Join(configDir, "tidewater", "worldd", "zerotier"), *zeroTierDataDir); err != nil {
 			return fmt.Errorf("migrate existing ZeroTier identity: %w", err)
@@ -412,10 +422,6 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("start ZeroTier: %w", err)
 		}
-		defer func() {
-			stop()
-			_ = zeroTier.Close()
-		}()
 		addresses := zeroTier.Addresses()
 		ztAddresses, parseErr := zeroTierMultiaddrs(addresses, *listenPort)
 		if parseErr != nil {
@@ -423,8 +429,6 @@ func run() error {
 		}
 		parsedAnnounceAddresses = append(parsedAnnounceAddresses, ztAddresses...)
 		log.Printf("ZeroTier node %s joined %s at %v", zeroTier.NodeID(), *zeroTierNetwork, addresses)
-	} else {
-		defer stop()
 	}
 
 	listen := libp2pListenAddresses(*listenPort, parsedAnnounceAddresses)
@@ -440,11 +444,10 @@ func run() error {
 		return fmt.Errorf("relay address: %w", relayErr)
 	}
 	opts = append(opts, relayOpts...)
-	p2pHost, err := libp2p.New(opts...)
+	p2pHost, err = libp2p.New(opts...)
 	if err != nil {
 		return fmt.Errorf("start libp2p: %w", err)
 	}
-	defer p2pHost.Close()
 	if zeroTier != nil {
 		if err := zeroTier.StartBridge(ctx, *listenPort); err != nil {
 			return fmt.Errorf("start ZeroTier TCP bridge: %w", err)
