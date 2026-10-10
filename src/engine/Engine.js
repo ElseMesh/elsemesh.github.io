@@ -4,6 +4,7 @@ import { Scene } from './scene/Scene.js';
 import { Timer } from './math/Timer.js';
 import { MeshRenderer } from './render/MeshRenderer.js';
 import { FrameUniforms } from './render/Frame.js';
+import { selectBackend } from './Backend.js';
 
 // Canvas, device, main camera / scene and the frame loop.
 export class Engine {
@@ -15,6 +16,7 @@ export class Engine {
 		this.clock = new Timer();
 		this.frame = 0;
 		this.onResize = [];
+		this.backend = 'webgpu';
 
 	}
 
@@ -25,7 +27,27 @@ export class Engine {
 		this.container.appendChild( canvas );
 		this.canvas = canvas;
 		this.domElement = canvas;
-		await GPU.init( { canvas } );
+		const result = await selectBackend( {
+			initWebGPU: () => GPU.init( { canvas } ),
+			initWebGL: async () => {
+
+				// A canvas that attempted to acquire a WebGPU context cannot later be
+				// used for WebGL, so give the fallback a fresh canvas.
+				canvas.remove();
+				const { default: THREE } = await import( 'three' );
+				const webglCanvas = document.createElement( 'canvas' );
+				webglCanvas.tabIndex = 0;
+				this.renderer = new THREE.WebGLRenderer( { canvas: webglCanvas, antialias: true, powerPreference: 'high-performance' } );
+				this.renderer.setPixelRatio( Math.min( window.devicePixelRatio || 1, 1.5 ) );
+				this.container.appendChild( webglCanvas );
+				this.canvas = this.domElement = webglCanvas;
+				this.THREE = THREE;
+
+			},
+		} );
+		this.backend = result.backend;
+		this.fallbackReason = result.fallbackReason;
+		if ( this.backend === 'webgl' ) return this;
 		this.meshRenderer = new MeshRenderer();
 		this.meshRenderer.syncPipelines = false; // compile in the background (App.precompile waits for them)
 		this.camera = new PerspectiveCamera( 62, window.innerWidth / window.innerHeight, 0.06, 60000 );

@@ -31,7 +31,7 @@ window.__ui = ui;
 
 app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async () => {
 
-	app.ui = new AppUI( app, ui );
+	if ( app.backend !== 'webgl' ) app.ui = new AppUI( app, ui );
 	ui.setLoading( 1, 'Ready' );
 	await ui.hideLoader();
 	// frame-time benchmark and reference shots (see core/Bench.js): it drives the frames itself
@@ -47,7 +47,8 @@ app.init( ( p, text, until ) => ui.setLoading( p, text, until ) ).then( async ()
 	} else app.start();
 	ui.showStartOverlay( () => {
 
-		app.input.requestLock();
+		if ( app.webglFallback ) app.webglFallback.requestLock();
+		else app.input.requestLock();
 		if ( app.audio ) app.audio.resume();
 
 	} );

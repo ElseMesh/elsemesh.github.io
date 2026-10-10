@@ -212,6 +212,16 @@ export class App {
 		await progress( 0.02, 'Starting WebGPU…', undefined, 'gpu' );
 		const engine = this.engine = new Engine( document.getElementById( 'app' ) );
 		await engine.init();
+		this.backend = engine.backend;
+		if ( engine.backend === 'webgl' ) {
+
+			const { WebGLFallback } = await import( './fallback/WebGLFallback.js' );
+			this.webglFallback = new WebGLFallback( this, engine );
+			await this.webglFallback.init( onProgress );
+			return this;
+
+		}
+		this.backend = 'webgpu';
 		// systems take `renderer` first as in the three.js version: it is the Engine now (GPU access is global)
 		const renderer = engine;
 		const { scene, camera } = engine;
@@ -736,6 +746,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 	// ---------------------------------------------------------------- loop
 
 	start() {
+
+		if ( this.webglFallback ) return this.webglFallback.start();
 
 		this.engine.start( ( dt, t ) => this.frame( dt, t ), this.desktopFrameRateLimit );
 
