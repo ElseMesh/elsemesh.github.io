@@ -762,7 +762,7 @@ export class App {
 		this.player.pitch = spawn.pitch;
 		this.camera.quaternion.setFromEuler( new Euler( spawn.pitch, spawn.yaw, 0, 'YXZ' ) );
 
-		await progress( 0.34, 'Loading the starting area…', undefined, 'world' );
+		await progress( 0.34, 'Loading the starting area…', 0.82, 'world' );
 		const initialObjects = selectWorldObjectsForView( connector.manifest, this.camera, { maxPriority: 'nearby', maxDistance: connector.localOnly ? connector.maxViewDistanceMeters : 500 } );
 		const initialObjectIDs = new Set( initialObjects.map( object => object.id ) );
 		for ( const objectID of connector.initialRegionCellObjectIDs || [] ) initialObjectIDs.add( objectID );
@@ -793,6 +793,7 @@ export class App {
 			}
 			await connector.preload( {
 				through: 'background', assetIDs, concurrency: 1, retainAssets: false, retainAssetIDs,
+				onProgress: ( done, total ) => globalThis.__ui?.setLoadingDetail( done, total ),
 				onAsset: async ( assetId, bytes ) => {
 					const objectIDs = objectIDsByAsset.get( assetId );
 					if ( objectIDs ) await appendWorldPackageAssets( connector, this.linkedWorldRoot, new Map( [ [ assetId, bytes ] ] ), { objectIDs } );
