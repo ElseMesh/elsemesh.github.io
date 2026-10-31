@@ -56,6 +56,7 @@ let descriptorChoices = [ { id: 'gryffindor', label: 'Gryffindor' }, { id: 'huff
 const payloadFetchOrder = [];
 let secondCellCollisionMissing = true;
 let knownEmptyCellCollisionMissing = true;
+let unresolvedInstancedMeshComponents = 0;
 let abortNextCellFetch = false;
 let abortableFetchStarted;
 globalThis.fetch = async ( input, options = {} ) => {
@@ -80,7 +81,7 @@ globalThis.fetch = async ( input, options = {} ) => {
 	} );
 	if ( url.pathname === '/v1/regions' ) return Response.json( { regions: [ { id: 'great-hall', label: 'Great Hall', asset: '/v1/regions/great-hall' } ] } );
 	if ( url.pathname === '/v1/regions/great-hall/cells' ) return Response.json( {
-		sourceRevision: 'test-revision', cellSizeMeters: Number( url.searchParams.get( 'size' ) ), collisionSourceInventory: { staticMeshComponents: 3, otherPrimitiveComponents: 0, unclassifiedOtherPrimitiveComponents: 0, explicitlyNonQueryOtherPrimitiveComponents: 0, explicitlyNonBlockingForPawnOtherPrimitiveComponents: 0, landscapeHeightfieldCollisionComponents: 0, otherPrimitiveStatuses: {} }, cells: [
+		sourceRevision: 'test-revision', cellSizeMeters: Number( url.searchParams.get( 'size' ) ), collisionSourceInventory: { staticMeshComponents: 3, otherPrimitiveComponents: 0, unclassifiedOtherPrimitiveComponents: 0, explicitlyNonQueryOtherPrimitiveComponents: 0, explicitlyNonBlockingForPawnOtherPrimitiveComponents: 0, landscapeHeightfieldCollisionComponents: 0, unresolvedInstancedMeshComponents, otherPrimitiveStatuses: {} }, cells: [
 			{ x: 0, y: 0, z: 0, collisionEvidence: { scope: 'all-collision-sources', staticMeshComponentCount: 1, supportedSimpleShapeComponents: 1, explicitlyNonQueryCollidableComponents: 0, explicitlyNonBlockingForPawnComponents: 0, unknownComponents: 0, staticMeshComponentsClassified: true } },
 			{ x: 1, y: 0, z: 0, collisionEvidence: { scope: 'static-mesh-components-only', staticMeshComponentCount: 1, supportedSimpleShapeComponents: 0, explicitlyNonQueryCollidableComponents: 0, explicitlyNonBlockingForPawnComponents: 0, unknownComponents: 1, staticMeshComponentsClassified: false } },
 			{ x: 2, y: 0, z: 0, collisionEvidence: { scope: 'all-collision-sources', staticMeshComponentCount: 1, supportedSimpleShapeComponents: 0, explicitlyNonQueryCollidableComponents: 1, explicitlyNonBlockingForPawnComponents: 0, unknownComponents: 0, staticMeshComponentsClassified: true } },
@@ -146,15 +147,16 @@ try {
 	assert.deepEqual( manifest.entryPoints.map( entry => entry.id ), [ 'gryffindor', 'hufflepuff' ] );
 	assert.equal( manifest.rules.physicsProfile, 'default' );
 	assert.equal( 'seaLevel' in manifest.rules, false, 'local Hogwarts preview does not activate a default waterline' );
-	assert.equal( manifest.assets.length, 8, 'indexed collision and visual cells should have distinct assets' );
-	assert.equal( manifest.objects.length, 9, 'collision and visual cell objects plus the preview collider should be present' );
+	assert.equal( manifest.assets.length, 6, 'indexed collision and visual cells should have distinct assets' );
+	assert.equal( manifest.objects.length, 7, 'only indexed collision and visual cells plus the preview collider should be present' );
 	assert.equal( manifest.assets[ 0 ].id, 'local-region:great-hall:16:0,0,0:collision' );
 	assert.equal( manifest.objects[ 0 ].assetId, manifest.assets[ 0 ].id );
 	assert.equal( manifest.objects[ 0 ].regionCell, true );
 	assert.equal( manifest.objects[ 0 ].collisionPayload, true );
 	assert.equal( connector.initialRegionCellObjectIDs.has( manifest.objects[ 0 ].id ), true, 'startup preloads collision objects before visuals' );
-	assert.equal( connector.initialRegionCellObjectIDs.size, 2, 'startup cells are derived from the spawn cell and authored offset bounds' );
-	assert.ok( manifest.objects.some( object => object.id.endsWith( '-1,0,0:collision' ) ), 'negative startup cell offsets are applied to the derived spawn cell' );
+	assert.equal( connector.initialRegionCellObjectIDs.size, 1, 'only indexed cells in the authored startup footprint are preloaded' );
+	assert.equal( manifest.objects.some( object => object.id.endsWith( '-1,0,0:collision' ) ), false, 'empty startup cells do not create synthetic collision assets' );
+	assert.equal( connector.emptyCollisionCellsAreVerified, true, 'complete source inventory verifies absent spatial cells as empty' );
 	assert.deepEqual( manifest.objects[ 0 ].streamingBounds.center, [ 8, 8, 8 ] );
 	const previewSupport = manifest.objects.find( object => object.id === 'elsemesh-object:region-preview-floor-support' );
 	assert.equal( previewSupport.assetId, null );
@@ -163,12 +165,13 @@ try {
 	assert.equal( loaded.get( manifest.assets[ 0 ].id ).byteLength, bytes.byteLength );
 	assert.equal( parseGLB( loaded.get( manifest.assets[ 0 ].id ) ).nodes[ 0 ].extras.elsemeshCollision.coordinateSystem, 'elsemesh-y-up-meters/1', 'collision-only GLB metadata is readable by the ElseMesh loader' );
 	assert.deepEqual( parseGLB( loaded.get( manifest.assets[ 2 ].id ) ).nodes, [], 'missing collision bytes remain representable to the package loader' );
-	assert.deepEqual( payloadFetchOrder, [ 'collision', 'collision', 'collision', 'collision', 'visual', 'visual', 'visual', 'visual' ], 'collision requests must be fetched before visual requests' );
+	assert.deepEqual( payloadFetchOrder, [ 'collision', 'collision', 'collision', 'visual', 'visual', 'visual' ], 'collision requests must be fetched before visual requests' );
 	assert.equal( connector.assetBytes, [ ...connector.assets.values() ].reduce( ( sum, value ) => sum + value.byteLength, 0 ), 'unknown collision placeholders are not cached as provider data' );
-	assert.equal( leaseReleases, 8, 'each region fetch should release its temporary visitor lease' );
+	assert.equal( leaseReleases, 6, 'each region fetch should release its temporary visitor lease' );
 	const collisionIDs = [ ...connector.collisionObjectIDsByCell.get( '0,0,0' ), ...connector.collisionObjectIDsByCell.get( '1,0,0' ) ];
 	const emptyCollisionID = [ ...connector.collisionObjectIDsByCell.get( '2,0,0' ) ][ 0 ];
 	assert.equal( connector.isCollisionPathReady( [ 1, 0, 1 ], [ 2, 0, 1 ], { loadedObjects: new Set( [ collisionIDs[ 0 ] ] ) } ), true, 'loaded collision with complete source coverage permits a local path' );
+	assert.equal( connector.isCollisionPathReady( [ 49, 0, 1 ], [ 50, 0, 1 ], { loadedObjects: new Set() } ), true, 'a path through a cell absent from every complete layer remains open' );
 	assert.equal( connector.isCollisionPathReady( [ 15, 0, 1 ], [ 17, 0, 1 ], { loadedObjects: new Set( [ collisionIDs[ 0 ] ] ) } ), false, 'movement stops until collision data for every crossed cell has loaded' );
 	assert.equal( connector.isCollisionPathReady( [ 15, 0, 1 ], [ 17, 0, 1 ], { loadedObjects: new Set( collisionIDs ) } ), false, 'a missing collision response remains unknown and blocks the swept path even if the loader has an empty placeholder' );
 	secondCellCollisionMissing = false;
@@ -185,7 +188,7 @@ try {
 	assert.equal( connector.assetBytes, [ ...connector.assets.values() ].reduce( ( sum, value ) => sum + value.byteLength, 0 ), 'unloaded cells should release cached browser bytes' );
 	assert.equal( await connector.getAsset( manifest.assets[ 0 ].id ).then( value => value.byteLength ), bytes.byteLength );
 	assert.equal( cellFetches, 3, 'a released cell should be fetched again on demand' );
-	assert.equal( leaseReleases, 11, 'collision retries and a refetched cell should release their leases' );
+	assert.equal( leaseReleases, 9, 'collision retries and a refetched cell should release their leases' );
 	connector.releaseAsset( manifest.assets[ 0 ].id );
 	abortNextCellFetch = true;
 	const requestStarted = new Promise( resolve => { abortableFetchStarted = resolve; } );
@@ -194,7 +197,7 @@ try {
 	await requestStarted;
 	abortController.abort();
 	await assert.rejects( abortedRequest, { name: 'AbortError' } );
-	assert.equal( leaseReleases, 12, 'aborting a visitor fetch should release its server lease' );
+	assert.equal( leaseReleases, 10, 'aborting a visitor fetch should release its server lease' );
 	const retainedAssetId = manifest.assets[ 0 ].id;
 	const streamedAssetId = manifest.assets[ 1 ].id;
 	connector.releaseAsset( retainedAssetId );
@@ -211,6 +214,13 @@ try {
 	assert.equal( connector.assets.has( streamedAssetId ), false, 'streamed visuals release their browser byte cache after processing' );
 	connector.close();
 	assert.equal( connector.assets.size, 0 );
+	unresolvedInstancedMeshComponents = 1;
+	const incompleteCoverageConnector = new LocalRegionConnector( link );
+	await incompleteCoverageConnector.getManifest();
+	assert.equal( incompleteCoverageConnector.emptyCollisionCellsAreVerified, false, 'unresolved instance bounds prevent treating absent cells as empty' );
+	assert.equal( incompleteCoverageConnector.isCollisionPathReady( [ 49, 0, 1 ], [ 50, 0, 1 ], { loadedObjects: new Set() } ), false, 'absent cells remain blocked when the source inventory is incomplete' );
+	incompleteCoverageConnector.close();
+	unresolvedInstancedMeshComponents = 0;
 	descriptorChoices = [];
 	const singleSpawnConnector = new LocalRegionConnector( link );
 	const singleSpawnManifest = await singleSpawnConnector.getManifest();
