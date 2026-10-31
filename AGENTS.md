@@ -20,6 +20,7 @@
 ## Hogwarts bridge build output
 
 - Build the Hogwarts .NET bridge from the external ElseMesh build tree with `--artifacts-path HogwartsBridge.build`. The root `.gitignore` protects this persistent build directory from `cpto` cleanup; do not put generated bridge output under the Hogwarts source sub-repo.
+- `cpto` skips nested Git submodules when syncing a parent repository, so sync `worlds/Hogwarts` separately into its matching build-tree path. Use `--update-existing` for edits to files already present in that copy; it preserves target-only files but does not create missing files. For a full subrepo sync, keep build-only files protected by ignore rules in the subrepo.
 
 ## Browser process cleanup
 
