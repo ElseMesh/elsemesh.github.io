@@ -93,6 +93,7 @@ export class LocalRegionConnector {
 		this.collisionObjectIDByAsset = new Map();
 		this.unknownCollisionObjectIDs = new Set();
 		this.unverifiedCollisionSourceObjectIDs = new Set();
+		this.verifiedEmptyCollisionObjectIDs = new Set();
 		this.collisionObjectIDsByCell = new Map();
 		this.collisionLoadLatencyMs = 2000;
 		this.cellSizeMeters = 0;
@@ -200,7 +201,9 @@ export class LocalRegionConnector {
 				this.regionAssets.set( visualAssetId, visualURL.href );
 				this.collisionAssetIDs.add( collisionAssetId );
 				this.collisionObjectIDByAsset.set( collisionAssetId, collisionObjectId );
-				if ( ! allCollisionSourcesIndexed || cell.evidence?.scope !== 'all-collision-sources' || ! cell.evidence.staticMeshComponentsClassified ) this.unverifiedCollisionSourceObjectIDs.add( collisionObjectId );
+				const collisionCoverageVerified = allCollisionSourcesIndexed && cell.evidence?.scope === 'all-collision-sources' && cell.evidence.staticMeshComponentsClassified;
+				if ( ! collisionCoverageVerified ) this.unverifiedCollisionSourceObjectIDs.add( collisionObjectId );
+				else if ( cell.evidence.supportedSimpleShapeComponents === 0 && cell.evidence.unknownComponents === 0 ) this.verifiedEmptyCollisionObjectIDs.add( collisionObjectId );
 				cellObjectIDs.add( collisionObjectId );
 				this.collisionObjectIDsByCell.set( cellKey, cellObjectIDs );
 				if ( isStartupCell ) this.initialRegionCellObjectIDs.add( collisionObjectId );
@@ -282,8 +285,10 @@ export class LocalRegionConnector {
 			requireValue( response.headers.get( 'ETag' ) === `"sha256-${digestHex}"`, 'Local region ETag does not match its content digest' );
 			const collisionObjectID = this.collisionObjectIDByAsset.get( assetId );
 			if ( collisionObjectID ) {
-				// This distinguishes absent payloads from shape-bearing data; the provider still needs a full-cell coverage proof.
-				if ( hasEmbeddedCollisionShape( bytes ) && ! this.unverifiedCollisionSourceObjectIDs.has( collisionObjectID ) ) this.unknownCollisionObjectIDs.delete( collisionObjectID );
+				// A parsed empty GLB is coverage only when provider evidence proves every source is classified and non-blocking.
+				const hasCollisionShape = hasEmbeddedCollisionShape( bytes );
+				const verifiedEmpty = this.verifiedEmptyCollisionObjectIDs.has( collisionObjectID ) && ! hasCollisionShape;
+				if ( ( hasCollisionShape || verifiedEmpty ) && ! this.unverifiedCollisionSourceObjectIDs.has( collisionObjectID ) ) this.unknownCollisionObjectIDs.delete( collisionObjectID );
 				else this.unknownCollisionObjectIDs.add( collisionObjectID );
 			}
 			return this.#cacheAsset( assetId, bytes );
@@ -393,6 +398,7 @@ export class LocalRegionConnector {
 		this.collisionObjectIDByAsset.clear();
 		this.unknownCollisionObjectIDs.clear();
 		this.unverifiedCollisionSourceObjectIDs.clear();
+		this.verifiedEmptyCollisionObjectIDs.clear();
 		this.collisionObjectIDsByCell.clear();
 		this.collisionLoadLatencyMs = 2000;
 		this.cellSizeMeters = 0;
