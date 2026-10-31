@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { Colliders } from '../src/world/Colliders.js';
 import { Vector3 } from '../src/engine/math/Vector3.js';
 import { Group } from '../src/engine/scene/Group.js';
-import { loadWorldPackage, registerWorldPackageCollisions, unregisterWorldPackageCollisions } from '../src/network/WorldPackage.js';
+import { loadWorldPackage, registerWorldPackageCollisionPayload, registerWorldPackageCollisions, unregisterWorldPackageCollisions } from '../src/network/WorldPackage.js';
 import { appendWorldPackageAssets } from '../src/network/WorldPackage.js';
 import { validateWorldSource } from '../src/network/WorldSource.js';
 import { validateWorldObjects } from '../src/network/WorldConnector.js';
@@ -106,6 +106,22 @@ assert.equal( bridgedColliders.boxes.length, 2, 'streaming registration does not
 unregisterWorldPackageCollisions( bridgedRoot, bridgedColliders );
 assert.equal( bridgedColliders.boxes.length, 0, 'world handoff removes embedded box and convex-bound colliders' );
 assert.equal( bridgedColliders.cylinders.length, 0, 'world handoff removes embedded sphere and capsule colliders' );
+
+const streamedCollisionObject = {
+	id: 'elsemesh-object:streamed-collision-cell',
+	transform: { position: [ 10, 2, 30 ], yaw: Math.PI / 2 }, scale: [ 2, 1, 1 ],
+};
+const streamedColliders = new Colliders();
+const streamedShapes = registerWorldPackageCollisionPayload( bodySetupGLB( { elsemeshCollision: bodySetupMetadata } ), streamedCollisionObject, streamedColliders );
+assert.equal( streamedShapes.length, 4, 'streamed collision GLB registers its box, sphere, capsule, and convex bounds' );
+assert.equal( streamedColliders.boxes.length, 2, 'streamed collision GLB registers box and convex colliders' );
+assert.equal( streamedColliders.cylinders.length, 2, 'streamed collision GLB registers sphere and capsule colliders' );
+assert.ok( Math.abs( streamedColliders.groundHeightAt( 10, 30, 3 ) - 2 ) < 1e-6, 'streamed collision GLB applies its cell transform before movement uses the floor' );
+for ( const { kind, collider } of streamedShapes ) {
+	if ( kind === 'box' ) streamedColliders.removeBox( collider );
+	else streamedColliders.removeCylinder( collider );
+}
+assert.equal( streamedColliders.boxes.length + streamedColliders.cylinders.length, 0, 'evicting a streamed collision cell removes all of its shapes' );
 
 const previewSupport = {
 	id: 'elsemesh-object:preview-support', kind: 'asset-instance', label: 'Provisional preview support', assetId: null,

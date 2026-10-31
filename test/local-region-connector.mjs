@@ -93,7 +93,7 @@ try {
 		search: '?localProvider=http%3A%2F%2F127.0.0.1%3A4179&localMap=Great%20Hall',
 		href: 'http://127.0.0.1:5189/?localProvider=http%3A%2F%2F127.0.0.1%3A4179&localMap=Great%20Hall',
 	} );
-	assert.deepEqual( link, { localProvider: 'http://127.0.0.1:4179', localMap: 'Great Hall' } );
+	assert.deepEqual( link, { localProvider: 'http://127.0.0.1:4179', localMap: 'Great Hall', environment: null } );
 	const localPage = 'http://127.0.0.1:5189/?localProvider=http%3A%2F%2F127.0.0.1%3A4179&localMap=Great%20Hall';
 	assert.equal( await discoverLocalWorldURL( { pageURL: localPage, fetchImpl: () => { throw new Error( 'must not query the default world for a local bridge link' ); } } ), null );
 	assert.equal( defaultHomeWorldURL( { pageURL: localPage, storage: { getItem: () => '{"worldId":"elsemesh:example-island"}' } } ), null );
@@ -161,6 +161,20 @@ try {
 	abortController.abort();
 	await assert.rejects( abortedRequest, { name: 'AbortError' } );
 	assert.equal( leaseReleases, 9, 'aborting a visitor fetch should release its server lease' );
+	const retainedAssetId = manifest.assets[ 0 ].id;
+	const streamedAssetId = manifest.assets[ 1 ].id;
+	connector.releaseAsset( retainedAssetId );
+	connector.releaseAsset( streamedAssetId );
+	const streamedAssetIDs = [];
+	const retainedAssets = await connector.preload( {
+		assetIDs: new Set( [ retainedAssetId, streamedAssetId ] ), retainAssets: false,
+		retainAssetIDs: new Set( [ retainedAssetId ] ),
+		onAsset: async assetId => streamedAssetIDs.push( assetId ),
+	} );
+	assert.deepEqual( streamedAssetIDs, [ retainedAssetId, streamedAssetId ], 'streamed asset callback receives collision then visual payloads' );
+	assert.deepEqual( [ ...retainedAssets.keys() ], [ retainedAssetId ], 'only explicitly retained asset IDs stay in the returned preload map' );
+	assert.equal( connector.assets.has( retainedAssetId ), true, 'retained component data remains cached for installation' );
+	assert.equal( connector.assets.has( streamedAssetId ), false, 'streamed visuals release their browser byte cache after processing' );
 	connector.close();
 	assert.equal( connector.assets.size, 0 );
 	descriptorChoices = [];
