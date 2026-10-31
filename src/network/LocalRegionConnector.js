@@ -95,6 +95,7 @@ export class LocalRegionConnector {
 		this.unverifiedCollisionSourceObjectIDs = new Set();
 		this.verifiedEmptyCollisionObjectIDs = new Set();
 		this.collisionObjectIDsByCell = new Map();
+		this.emptyCollisionCellsAreVerified = false;
 		this.collisionLoadLatencyMs = 2000;
 		this.cellSizeMeters = 0;
 		this.maxViewDistanceMeters = 0;
@@ -139,6 +140,7 @@ export class LocalRegionConnector {
 		const startupCellKeys = new Set( startupCells.map( cell => cell.join( ',' ) ) );
 		const spawnCell = selection.previewSpawn.position.map( coordinate => cellCoordinate( coordinate, previewRegion.cellSizeMeters ) );
 		const explicitStartupCellKeys = new Set( startupCellOffsets.map( offset => spawnCell.map( ( value, axis ) => value + offset[ axis ] ).join( ',' ) ) );
+		this.emptyCollisionCellsAreVerified = true;
 		this.initialRegionCellObjectIDs = new Set();
 		this.initialRegionVisualObjectIDs = new Set();
 		this.explicitStartupCellVisualObjectIDs = new Set();
@@ -161,22 +163,15 @@ export class LocalRegionConnector {
 			const cellIndex = await fetchJSON( cellIndexURL, signal );
 			requireValue( cellIndex.sourceRevision === this.sourceRevision && cellIndex.cellSizeMeters === previewRegion.cellSizeMeters && Array.isArray( cellIndex.cells ) && cellIndex.cells.length <= 50000, 'Local provider returned an invalid occupied-cell index' );
 			const sourceInventory = cellIndex.collisionSourceInventory;
-			requireValue( Number.isSafeInteger( sourceInventory?.staticMeshComponents ) && sourceInventory.staticMeshComponents >= 0 && Number.isSafeInteger( sourceInventory.otherPrimitiveComponents ) && sourceInventory.otherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.unclassifiedOtherPrimitiveComponents ) && sourceInventory.unclassifiedOtherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.explicitlyNonQueryOtherPrimitiveComponents ) && sourceInventory.explicitlyNonQueryOtherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents ) && sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents >= 0 && sourceInventory.unclassifiedOtherPrimitiveComponents + sourceInventory.explicitlyNonQueryOtherPrimitiveComponents + sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents === sourceInventory.otherPrimitiveComponents && Number.isSafeInteger( sourceInventory.landscapeHeightfieldCollisionComponents ) && sourceInventory.landscapeHeightfieldCollisionComponents >= 0 && sourceInventory.otherPrimitiveStatuses && typeof sourceInventory.otherPrimitiveStatuses === 'object' && Object.values( sourceInventory.otherPrimitiveStatuses ).every( count => Number.isSafeInteger( count ) && count >= 0 ) && Object.values( sourceInventory.otherPrimitiveStatuses ).reduce( ( total, count ) => total + count, 0 ) === sourceInventory.otherPrimitiveComponents, 'Local provider returned invalid collision source inventory' );
-			const allCollisionSourcesIndexed = sourceInventory.unclassifiedOtherPrimitiveComponents === 0 && sourceInventory.landscapeHeightfieldCollisionComponents === 0;
+			requireValue( Number.isSafeInteger( sourceInventory?.staticMeshComponents ) && sourceInventory.staticMeshComponents >= 0 && Number.isSafeInteger( sourceInventory.otherPrimitiveComponents ) && sourceInventory.otherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.unclassifiedOtherPrimitiveComponents ) && sourceInventory.unclassifiedOtherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.explicitlyNonQueryOtherPrimitiveComponents ) && sourceInventory.explicitlyNonQueryOtherPrimitiveComponents >= 0 && Number.isSafeInteger( sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents ) && sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents >= 0 && sourceInventory.unclassifiedOtherPrimitiveComponents + sourceInventory.explicitlyNonQueryOtherPrimitiveComponents + sourceInventory.explicitlyNonBlockingForPawnOtherPrimitiveComponents === sourceInventory.otherPrimitiveComponents && Number.isSafeInteger( sourceInventory.landscapeHeightfieldCollisionComponents ) && sourceInventory.landscapeHeightfieldCollisionComponents >= 0 && Number.isSafeInteger( sourceInventory.unresolvedInstancedMeshComponents ) && sourceInventory.unresolvedInstancedMeshComponents >= 0 && sourceInventory.otherPrimitiveStatuses && typeof sourceInventory.otherPrimitiveStatuses === 'object' && Object.values( sourceInventory.otherPrimitiveStatuses ).every( count => Number.isSafeInteger( count ) && count >= 0 ) && Object.values( sourceInventory.otherPrimitiveStatuses ).reduce( ( total, count ) => total + count, 0 ) === sourceInventory.otherPrimitiveComponents, 'Local provider returned invalid collision source inventory' );
+			const allCollisionSourcesIndexed = sourceInventory.unclassifiedOtherPrimitiveComponents === 0 && sourceInventory.landscapeHeightfieldCollisionComponents === 0 && sourceInventory.unresolvedInstancedMeshComponents === 0;
+			this.emptyCollisionCellsAreVerified = this.emptyCollisionCellsAreVerified && allCollisionSourcesIndexed;
 			const cells = new Map();
 			for ( const cell of cellIndex.cells ) {
 				requireValue( Number.isSafeInteger( cell?.x ) && Number.isSafeInteger( cell?.y ) && Number.isSafeInteger( cell?.z ), 'Local provider returned invalid cell coordinates' );
 				const evidence = cell.collisionEvidence;
 				requireValue( [ 'all-collision-sources', 'static-mesh-components-only' ].includes( evidence?.scope ) && Number.isSafeInteger( evidence.staticMeshComponentCount ) && evidence.staticMeshComponentCount >= 0 && Number.isSafeInteger( evidence.unknownComponents ) && evidence.unknownComponents >= 0 && Number.isSafeInteger( evidence.supportedSimpleShapeComponents ) && evidence.supportedSimpleShapeComponents >= 0 && Number.isSafeInteger( evidence.explicitlyNonQueryCollidableComponents ) && evidence.explicitlyNonQueryCollidableComponents >= 0 && Number.isSafeInteger( evidence.explicitlyNonBlockingForPawnComponents ) && evidence.explicitlyNonBlockingForPawnComponents >= 0 && evidence.supportedSimpleShapeComponents + evidence.explicitlyNonQueryCollidableComponents + evidence.explicitlyNonBlockingForPawnComponents + evidence.unknownComponents === evidence.staticMeshComponentCount && evidence.staticMeshComponentsClassified === ( evidence.unknownComponents === 0 ), 'Local provider returned invalid collision coverage evidence' );
 				cells.set( `${cell.x},${cell.y},${cell.z}`, { x: cell.x, y: cell.y, z: cell.z, evidence } );
-			}
-			const isPrimaryRegion = sourceRegion.id === region.id;
-			for ( const startupCell of startupCells ) {
-				const cellKey = startupCell.join( ',' );
-				if ( isPrimaryRegion || cells.has( cellKey ) ) {
-					const existing = cells.get( cellKey );
-					cells.set( cellKey, { x: startupCell[ 0 ], y: startupCell[ 1 ], z: startupCell[ 2 ], evidence: existing?.evidence } );
-				}
 			}
 			for ( const cell of cells.values() ) {
 				const cellKey = `${cell.x},${cell.y},${cell.z}`;
@@ -242,7 +237,7 @@ export class LocalRegionConnector {
 		return collisionPathReady( {
 			from, to, cellSizeMeters: this.cellSizeMeters,
 			objectIDsByCell: this.collisionObjectIDsByCell, loadedObjectIDs: loadedObjects,
-			unknownObjectIDs: this.unknownCollisionObjectIDs,
+			unknownObjectIDs: this.unknownCollisionObjectIDs, emptyCellsAreVerified: this.emptyCollisionCellsAreVerified,
 		} );
 	}
 
@@ -400,6 +395,7 @@ export class LocalRegionConnector {
 		this.unverifiedCollisionSourceObjectIDs.clear();
 		this.verifiedEmptyCollisionObjectIDs.clear();
 		this.collisionObjectIDsByCell.clear();
+		this.emptyCollisionCellsAreVerified = false;
 		this.collisionLoadLatencyMs = 2000;
 		this.cellSizeMeters = 0;
 	}

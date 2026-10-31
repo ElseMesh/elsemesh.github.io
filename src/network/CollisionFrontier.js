@@ -20,11 +20,14 @@ export function sweptCollisionCellKeys( from, to, { cellSizeMeters, radius = 0.3
 	return cells;
 }
 
-export function collisionPathReady( { from, to, cellSizeMeters, radius = 0.3, height = 1.75, objectIDsByCell, loadedObjectIDs, unknownObjectIDs } ) {
+export function collisionPathReady( { from, to, cellSizeMeters, radius = 0.3, height = 1.75, objectIDsByCell, loadedObjectIDs, unknownObjectIDs, emptyCellsAreVerified = false } ) {
 	if ( ! objectIDsByCell || ! loadedObjectIDs ) return false;
 	for ( const cellKey of sweptCollisionCellKeys( from, to, { cellSizeMeters, radius, height } ) ) {
 		const objectIDs = objectIDsByCell.get( cellKey );
-		if ( ! objectIDs?.size ) return false;
+		if ( ! objectIDs?.size ) {
+			if ( emptyCellsAreVerified ) continue;
+			return false;
+		}
 		for ( const objectID of objectIDs ) {
 			if ( unknownObjectIDs?.has( objectID ) ) return false;
 			if ( ! loadedObjectIDs.has( objectID ) ) return false;
