@@ -38,9 +38,10 @@ import { pierWalkableHeightAt } from '../world/PierSurface.js';
 import { mulberry32 } from '../util/Noise.js';
 import { HeightfieldTerrainData } from '../world/HeightfieldTerrainData.js';
 import { worldComponentRuntimeRecord, worldEntryPointPose, worldSpawnPose } from '../network/WorldSource.js';
-import { selectWorldObjectsForView, transformBoundsCenter } from '../network/WorldStreaming.js';
+import { selectWorldComponentsForView, selectWorldObjectsForView, transformBoundsCenter } from '../network/WorldStreaming.js';
 import { collisionLookaheadDistance } from '../network/CollisionFrontier.js';
 import { selectLocalRegionStartupObjects } from '../network/LocalRegionStartup.js';
+import { registerWorldPackageCollisionPayload } from '../network/WorldPackage.js';
 import { chooseWorldEntryPoint } from '../ui/WorldEntryPointPicker.js';
 
 const LOCAL_REGION_STREAM_BATCH_SIZE = 1;
@@ -729,12 +730,13 @@ export class WebGLFallback {
 		this.presenceConnector = null;
 		this.presencePending = false;
 		this.presenceNextSend = 0;
-		this.debugNoWater = new URLSearchParams( location.search ).has( 'noWater' );
 		this.portals = [];
 		this.blockers = [];
 		this.remotePlayers = new Map();
 		this.loader = new GLTFLoader();
 		this.worldLink = worldLinkFromLocation();
+		this.debugNoWater = new URLSearchParams( location.search ).has( 'noWater' )
+			|| this.worldLink?.environment?.water?.enabled === false;
 		this.waterQuery = null;
 		this.input = null;
 		this.player = null;
@@ -742,6 +744,7 @@ export class WebGLFallback {
 		this.worldSeaLevel = this.defaultWorldSource?.rules.seaLevel ?? 0;
 		this.hostedWildlifeComponent = null;
 		this.hostedComponentRuntimes = [];
+		this.hostedCollisionPayloads = new Map();
 		this.vegetationRecords = null;
 		this.wildlifeRuntime = null;
 		this.wildlifeAdapter = null;
@@ -1579,6 +1582,11 @@ export class WebGLFallback {
 		} else manifest = await this.connector.getManifest();
 		let localSpawn = null;
 		let assets;
+		const components = manifest.components || [];
+		const T = this.THREE, cache = new Map(), lodQueue = new LODLoadQueue();
+		this.hostedModelCache = cache;
+		this.worldLODs = new Map();
+		this.hostedObjectRoots ||= new Map();
 		if ( this.connector.localOnly ) {
 			const entry = await chooseWorldEntryPoint( manifest );
 			localSpawn = worldEntryPointPose( entry ) || worldSpawnPose( manifest );
@@ -1586,21 +1594,69 @@ export class WebGLFallback {
 			this.camera.rotation.order = 'YXZ';
 			this.camera.rotation.set( localSpawn.pitch || 0, localSpawn.yaw || 0, 0 );
 			const initialObjects = selectLocalRegionStartupObjects( this.connector, manifest, this.camera, localSpawn );
+			const initialComponents = selectWorldComponentsForView( manifest, this.camera, { maxPriority: 'nearby' } );
 			const initialObjectIDs = new Set( initialObjects.map( object => object.id ) );
 			const assetIDs = new Set( manifest.objects.filter( object => initialObjectIDs.has( object.id ) && object.assetId ).map( object => object.assetId ) );
+			const retainAssetIDs = new Set( initialComponents.flatMap( component => ( component.assets || [] ).map( reference => reference.assetId ) ) );
+			for ( const assetId of retainAssetIDs ) assetIDs.add( assetId );
+			for ( const extension of manifest.experience?.extensions || [] ) {
+				assetIDs.add( extension.assetId );
+				retainAssetIDs.add( extension.assetId );
+			}
+			const objectsByAsset = new Map();
+			for ( const object of initialObjects ) {
+				if ( ! object.assetId ) continue;
+				const objects = objectsByAsset.get( object.assetId ) || [];
+				objects.push( object );
+				objectsByAsset.set( object.assetId, objects );
+			}
+			this.localLoadedObjectIDs = new Set( initialObjects.filter( object => ! object.assetId ).map( object => object.id ) );
 			assets = await this.connector.preload( {
 				assetIDs,
+				retainAssets: false,
+				retainAssetIDs,
+				onAsset: async ( assetId, bytes ) => {
+					const objects = objectsByAsset.get( assetId ) || [];
+					if ( ! objects.length ) return;
+					if ( this.connector.collisionAssetIDs.has( assetId ) ) {
+						for ( const object of objects ) {
+							const shapes = registerWorldPackageCollisionPayload( bytes, object, this.app.hostedColliders );
+							if ( shapes.length ) this.hostedCollisionPayloads.set( object.id, shapes );
+							this.localLoadedObjectIDs.add( object.id );
+						}
+						return;
+					}
+					let model = cache.get( assetId );
+					if ( ! model ) {
+						const buffer = bytes instanceof ArrayBuffer ? bytes : bytes.buffer.slice( bytes.byteOffset, bytes.byteOffset + bytes.byteLength );
+						model = await this.loader.parseAsync( buffer, '' );
+						cache.set( assetId, model );
+					}
+					for ( const object of objects ) {
+						const root = new T.Group();
+						const base = model.scene.clone( true );
+						prepareHostedWebGLModel( base );
+						prepareWebGLLODFade( base );
+						base.name = `${ object.label || object.id } · LOD 0`;
+						root.add( base );
+						const tr = object.transform || {};
+						root.position.set( ...( tr.position || [ 0, 0, 0 ] ) );
+						if ( tr.rotation ) root.quaternion.set( ...tr.rotation ); else root.rotation.y = tr.yaw || 0;
+						root.scale.set( ...( object.scale || [ 1, 1, 1 ] ) );
+						root.updateMatrixWorld( true );
+						this.scene.add( root );
+						this.hostedObjectRoots.set( object.id, root );
+						this.localLoadedObjectIDs.add( object.id );
+					}
+					if ( objects.length === 1 && ! objects[ 0 ].lods?.length ) cache.delete( assetId );
+				},
 				onProgress: ( done, total ) => globalThis.__ui?.setLoadingDetail( done, total ),
 			} );
-			this.localLoadedObjectIDs = new Set( manifest.objects.filter( object => initialObjectIDs.has( object.id ) && ( ! object.assetId || assets.has( object.assetId ) ) ).map( object => object.id ) );
+			for ( const object of initialObjects ) if ( object.assetId && ! this.connector.regionAssets.has( object.assetId ) && assets.has( object.assetId ) ) this.localLoadedObjectIDs.add( object.id );
 		} else {
 			assets = await this.connector.preload( { through: 'visible' } );
 			this.localLoadedObjectIDs = new Set( manifest.objects.filter( object => object.assetId && assets.has( object.assetId ) ).map( object => object.id ) );
 		}
-		const T = this.THREE, cache = new Map(), lodQueue = new LODLoadQueue();
-		this.hostedModelCache = cache;
-		this.worldLODs = new Map();
-		const components = manifest.components || [];
 		this.hostedWildlifeComponent = components.find( component => worldComponentDescriptor( component.type )?.wildlifeSimulation ) || null;
 		const terrainComponent = components.find( component => component.type === 'elsemesh.terrain-surface/1' );
 		this.hostedTerrainComponent = terrainComponent;
@@ -1984,6 +2040,11 @@ export class WebGLFallback {
 				if ( this.camera.position.distanceTo( center ) > 64 && ! viewObjectIDs.has( object.id ) ) released.push( object );
 			}
 			for ( const object of released ) {
+				for ( const { kind, collider } of this.hostedCollisionPayloads.get( object.id ) || [] ) {
+					if ( kind === 'box' ) this.app.hostedColliders.removeBox( collider );
+					else this.app.hostedColliders.removeCylinder( collider );
+				}
+				this.hostedCollisionPayloads.delete( object.id );
 				const root = this.hostedObjectRoots?.get( object.id );
 				if ( root ) {
 					root.traverse( node => {
@@ -2062,6 +2123,12 @@ export class WebGLFallback {
 			for ( const object of wanted ) {
 				if ( loaded.has( object.id ) ) continue;
 				if ( object.assetId && ! assets.has( object.assetId ) ) continue;
+				if ( object.collisionPayload ) {
+					const shapes = registerWorldPackageCollisionPayload( assets.get( object.assetId ), object, this.app.hostedColliders );
+					if ( shapes.length ) this.hostedCollisionPayloads.set( object.id, shapes );
+					loaded.add( object.id );
+					continue;
+				}
 				if ( object.assetId ) {
 					let model = this.hostedModelCache.get( object.assetId );
 					if ( ! model ) {

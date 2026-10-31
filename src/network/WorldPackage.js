@@ -527,6 +527,34 @@ function registerEmbeddedBodySetup( root, instance, objectId, colliders ) {
 	return registered;
 }
 
+export function registerWorldPackageCollisionPayload( bytes, object, colliders ) {
+	const parsed = parseGLB( bytes );
+	const root = new Group();
+	const instance = new Group();
+	const transform = object.transform || {};
+	instance.position.set( ...( transform.position || [ 0, 0, 0 ] ) );
+	if ( transform.rotation ) instance.quaternion.set( ...transform.rotation );
+	else instance.rotation.y = transform.yaw || 0;
+	instance.scale.set( ...( object.scale || [ 1, 1, 1 ] ) );
+	root.add( instance );
+
+	const nodes = parsed.nodes.map( source => {
+		const node = new Group();
+		node.name = source.name;
+		node.position.set( ...source.t );
+		node.quaternion.set( ...source.r );
+		node.scale.set( ...source.s );
+		if ( source.extras?.elsemeshCollision ) node.userData.elsemeshCollision = source.extras.elsemeshCollision;
+		return node;
+	} );
+	for ( let index = 0; index < parsed.nodes.length; index ++ ) {
+		for ( const childIndex of parsed.nodes[ index ].children ) nodes[ index ].add( nodes[ childIndex ] );
+	}
+	for ( const rootIndex of parsed.roots ) instance.add( nodes[ rootIndex ] );
+	root.updateMatrixWorld( true );
+	return registerEmbeddedBodySetup( root, instance, object.id, colliders );
+}
+
 export function disposeWorldPackage( root ) {
 	const state = root?.userData?.worldPackage;
 	if ( ! root || state?.disposed ) return;

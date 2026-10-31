@@ -22,6 +22,15 @@ const worldProviderModules = configuredWorldProviderModules === undefined
 		.map( entry => resolve( worldsPath, entry.name, 'world-provider.js' ) )
 		.sort()
 	: configuredWorldProviderModules.split( ',' ).map( module => resolve( module.trim() ) ).filter( Boolean );
+const localWorldProvider = process.env.ELSEMESH_LOCAL_WORLD_PROVIDER || '';
+const localWorldMap = process.env.ELSEMESH_LOCAL_WORLD_MAP || '';
+const localWorldWaterEnabled = process.env.ELSEMESH_LOCAL_WORLD_WATER !== 'false';
+if ( Boolean( localWorldProvider ) !== Boolean( localWorldMap ) ) throw new Error( 'ELSEMESH_LOCAL_WORLD_PROVIDER and ELSEMESH_LOCAL_WORLD_MAP must be configured together' );
+if ( localWorldProvider ) {
+	const provider = new URL( localWorldProvider );
+	if ( ! [ 'http:', 'https:' ].includes( provider.protocol ) || ! [ 'localhost', '127.0.0.1', '[::1]' ].includes( provider.hostname ) || provider.username || provider.password || ! [ '', '/' ].includes( provider.pathname ) || provider.search || provider.hash ) throw new Error( 'ELSEMESH_LOCAL_WORLD_PROVIDER must be a loopback HTTP(S) origin' );
+	if ( localWorldMap.length > 256 || ! /^[\w .()/-]+$/.test( localWorldMap ) ) throw new Error( 'ELSEMESH_LOCAL_WORLD_MAP is invalid' );
+}
 
 function defaultWorldBinding() {
 	const id = '\0virtual:elsemesh-default-world';
@@ -83,6 +92,30 @@ function connectionLog() {
 	};
 }
 
+function localWorldRuntimeConfig() {
+	if ( ! localWorldProvider ) return null;
+	const config = JSON.stringify( {
+		localWorld: {
+			provider: localWorldProvider,
+			map: localWorldMap,
+			environment: { water: { enabled: localWorldWaterEnabled } },
+		},
+	} );
+	const serveConfig = ( req, res, next ) => {
+		if ( req.method !== 'GET' && req.method !== 'HEAD' ) return next();
+		if ( new URL( req.url, 'http://localhost' ).pathname !== '/elsemesh-config.js' ) return next();
+		res.statusCode = 200;
+		res.setHeader( 'Content-Type', 'text/javascript; charset=utf-8' );
+		res.setHeader( 'Cache-Control', 'no-store' );
+		res.end( `globalThis.ELSEMESH_CONFIG = Object.assign(globalThis.ELSEMESH_CONFIG || {}, ${config});` );
+	};
+	return {
+		name: 'elsemesh-local-world-runtime-config',
+		configureServer( server ) { server.middlewares.use( serveConfig ); },
+		configurePreviewServer( server ) { server.middlewares.use( serveConfig ); },
+	};
+}
+
 function worldPackageAssets() {
 	const worldsPath = resolve( 'worlds' );
 	return {
@@ -124,7 +157,7 @@ export default defineConfig( {
 	// World package assets use extensionless, content-addressed filenames.
 	assetsInclude: [ /\/assets\/[a-f\d]{64}$/i ],
 	resolve: { preserveSymlinks: true },
-	plugins: [ defaultWorldBinding(), worldProviderBinding(), connectionLog(), worldPackageAssets(), {
+	plugins: [ defaultWorldBinding(), worldProviderBinding(), connectionLog(), worldPackageAssets(), localWorldRuntimeConfig(), {
 		name: 'elsemesh-build-commit',
 		transformIndexHtml( html ) {
 			if ( ! html.includes( '%ELSEMESH_COMMIT%' ) ) throw new Error( 'Build commit placeholder is missing from index.html' );

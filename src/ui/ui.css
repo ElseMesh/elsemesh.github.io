@@ -85,11 +85,16 @@ body {
 	box-sizing: border-box;
 	padding: clamp(16px, 3vh, 32px) clamp(16px, 3vw, 48px) max(48px, env(safe-area-inset-bottom));
 	overflow: auto;
+	scrollbar-width: none;
 	color: var(--em-ink);
 	font-family: var(--em-font);
 	-webkit-font-smoothing: antialiased;
  background: var(--world-loader-background, #05090d);
 	transition: opacity 900ms var(--em-ease), visibility 0s linear 900ms;
+}
+
+#loader::-webkit-scrollbar {
+	display: none;
 }
 
 #loader.em-hidden {

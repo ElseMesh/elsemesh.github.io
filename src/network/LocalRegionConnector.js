@@ -112,7 +112,7 @@ export class LocalRegionConnector {
 		requireValue( previewRegion && Number.isInteger( previewRegion.cellSizeMeters ) && previewRegion.cellSizeMeters >= 8 && previewRegion.cellSizeMeters <= 256, 'Local provider has no valid preview cell size' );
 		requireValue( Number.isFinite( previewRegion.maxViewDistanceMeters ) && previewRegion.maxViewDistanceMeters > 0 && previewRegion.maxViewDistanceMeters <= 10000, 'Local provider has no valid world-authored cell view distance' );
 		const startupCellOffsets = previewRegion.startupCellOffsets ?? [];
-		requireValue( Array.isArray( startupCellOffsets ) && startupCellOffsets.length <= 32 && startupCellOffsets.every( offset => Array.isArray( offset ) && offset.length === 3 && offset.every( value => Number.isSafeInteger( value ) && Math.abs( value ) <= 128 ) ), 'Local provider has invalid startup cell offsets' );
+		requireValue( Array.isArray( startupCellOffsets ) && startupCellOffsets.length <= 40 && startupCellOffsets.every( offset => Array.isArray( offset ) && offset.length === 3 && offset.every( value => Number.isSafeInteger( value ) && Math.abs( value ) <= 128 ) ), 'Local provider has invalid startup cell offsets' );
 		const startupCells = deriveStartupCells( selection.previewSpawn.position, previewRegion );
 		if ( selection.previewSupport !== undefined ) {
 			const support = selection.previewSupport;
@@ -358,14 +358,24 @@ export class LocalRegionConnector {
 		return true;
 	}
 
-	async preload( { assetIDs, signal, onProgress = () => {} } = {} ) {
+	async preload( { assetIDs, signal, onProgress = () => {}, onAsset, retainAssets = true, retainAssetIDs = new Set() } = {} ) {
 		requireValue( this.manifest, 'Load the local world descriptor first' );
 		requireValue( typeof onProgress === 'function', 'Local region preload progress callback must be a function' );
+		requireValue( onAsset === undefined || typeof onAsset === 'function', 'Local region asset callback must be a function' );
+		requireValue( typeof retainAssets === 'boolean', 'Local region retention option must be a boolean' );
+		requireValue( retainAssetIDs instanceof Set, 'Local region retained asset IDs must be a Set' );
 		const selected = assetIDs ? [ ...new Set( assetIDs ) ] : [ ...this.regionAssets.keys() ];
 		selected.sort( ( a, b ) => Number( ! this.collisionAssetIDs.has( a ) ) - Number( ! this.collisionAssetIDs.has( b ) ) );
 		const loaded = new Map();
 		for ( const [ index, assetId ] of selected.entries() ) {
-			loaded.set( assetId, await this.getAsset( assetId, { signal } ) );
+			const bytes = await this.getAsset( assetId, { signal } );
+			const retain = retainAssets || retainAssetIDs.has( assetId );
+			try {
+				if ( onAsset ) await onAsset( assetId, bytes );
+				if ( retain ) loaded.set( assetId, bytes );
+			} finally {
+				if ( ! retain ) this.releaseAsset( assetId );
+			}
 			onProgress( index + 1, selected.length );
 		}
 		return loaded;

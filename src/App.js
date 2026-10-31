@@ -771,10 +771,37 @@ export class App {
 		const assetIDs = new Set( connector.manifest.objects.filter( object => initialObjectIDs.has( object.id ) && object.assetId ).map( object => object.assetId ) );
 		const initialComponents = selectWorldComponentsForView( connector.manifest, this.camera, { maxPriority: 'nearby' } );
 		const initialComponentIDs = new Set( initialComponents.map( component => component.id ) );
-		for ( const component of initialComponents ) for ( const id of componentAssetIDs( component ) ) assetIDs.add( id );
-		for ( const extension of connector.manifest.experience?.extensions || [] ) assetIDs.add( extension.assetId );
-		const assets = await connector.preload( { through: 'background', assetIDs, concurrency: 2 } );
-		this.linkedWorldRoot = await loadWorldPackage( connector, { assets, objectIDs: initialObjectIDs } );
+		const retainAssetIDs = new Set();
+		for ( const component of initialComponents ) {
+			for ( const id of componentAssetIDs( component ) ) {
+				assetIDs.add( id );
+				retainAssetIDs.add( id );
+			}
+		}
+		for ( const extension of connector.manifest.experience?.extensions || [] ) {
+			assetIDs.add( extension.assetId );
+			retainAssetIDs.add( extension.assetId );
+		}
+		if ( connector.localOnly ) {
+			this.linkedWorldRoot = await loadWorldPackage( connector, { assets: new Map(), objectIDs: initialObjectIDs } );
+			const objectIDsByAsset = new Map();
+			for ( const object of initialObjects ) {
+				if ( ! object.assetId ) continue;
+				const objectIDs = objectIDsByAsset.get( object.assetId ) || new Set();
+				objectIDs.add( object.id );
+				objectIDsByAsset.set( object.assetId, objectIDs );
+			}
+			await connector.preload( {
+				through: 'background', assetIDs, concurrency: 1, retainAssets: false, retainAssetIDs,
+				onAsset: async ( assetId, bytes ) => {
+					const objectIDs = objectIDsByAsset.get( assetId );
+					if ( objectIDs ) await appendWorldPackageAssets( connector, this.linkedWorldRoot, new Map( [ [ assetId, bytes ] ] ), { objectIDs } );
+				},
+			} );
+		} else {
+			const assets = await connector.preload( { through: 'background', assetIDs, concurrency: 2 } );
+			this.linkedWorldRoot = await loadWorldPackage( connector, { assets, objectIDs: initialObjectIDs } );
+		}
 		registerWorldPackageCollisions( this.linkedWorldRoot, this.hostedColliders );
 		await this.installWorldComponents( this.linkedWorldRoot, connector, initialComponentIDs );
 		registerWorldPackageCollisions( this.linkedWorldRoot, this.hostedColliders );

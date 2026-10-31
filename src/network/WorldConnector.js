@@ -36,8 +36,9 @@ export function assetConcurrencyForConnection( connection = globalThis.navigator
 
 export function worldLinkFromLocation( location = globalThis.location ) {
 	const params = new URLSearchParams( location.search );
-	const localProvider = params.get( 'localProvider' );
-	const localMap = params.get( 'localMap' );
+	const configuredLocalWorld = globalThis.ELSEMESH_CONFIG?.localWorld;
+	const localProvider = params.get( 'localProvider' ) || configuredLocalWorld?.provider;
+	const localMap = params.get( 'localMap' ) || configuredLocalWorld?.map;
 	if ( localProvider || localMap ) {
 		invariant( localProvider && localMap, 'A local provider URL and map name must be supplied together' );
 		invariant( ! params.has( 'worldId' ) && ! params.has( 'ztNodeId' ) && ! params.has( 'nodeId' ) && ! params.has( 'gateway' ), 'Local preview cannot be combined with a remote world invite' );
@@ -47,7 +48,7 @@ export function worldLinkFromLocation( location = globalThis.location ) {
 		const page = new URL( location.href );
 		invariant( [ 'http:', 'https:' ].includes( page.protocol ) && loopback( page.hostname ), 'Local region preview is available only from a loopback browser page' );
 		invariant( localMap.length <= 256 && /^[\w .()/-]+$/.test( localMap ), 'Invalid local map selector' );
-		return { localProvider: provider.origin, localMap };
+		return { localProvider: provider.origin, localMap, environment: configuredLocalWorld?.environment || null };
 	}
 	const worldId = params.get( 'worldId' );
 	const zeroTierNodeId = params.get( 'ztNodeId' ) || '';

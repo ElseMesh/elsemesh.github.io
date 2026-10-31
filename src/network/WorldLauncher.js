@@ -28,6 +28,7 @@ function isLoopback( hostname ) {
 export async function discoverLocalWorldURL( { pageURL = globalThis.location?.href, fetchImpl = globalThis.fetch } = {} ) {
 	const page = new URL( pageURL );
 	if ( ! [ 'http:', 'https:' ].includes( page.protocol ) ) return null;
+	if ( globalThis.ELSEMESH_CONFIG?.localWorld ) return null;
 	if ( page.searchParams.has( 'localProvider' ) || page.searchParams.has( 'localMap' ) ) return null;
 	if ( ! isLoopback( page.hostname ) || page.searchParams.has( 'worldId' ) || page.searchParams.has( 'ztNodeId' ) || page.searchParams.get( 'example' ) === '1' ) return null;
 	try {
