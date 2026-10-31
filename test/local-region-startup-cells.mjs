@@ -21,7 +21,7 @@ globalThis.fetch = async url => {
 	const payload = path.endsWith( '/descriptor' ) ? descriptor : path === '/v1/regions' ? { regions: [ { id: 'hall', label: 'Great Hall', asset: '/v1/regions/hall' } ] } : { sourceRevision: 'test-revision', cellSizeMeters: 16, cells: [ { x: 0, y: 0, z: 5 } ] };
 	if ( path !== '/v1/descriptor' && path !== '/v1/regions' ) {
 		payload.collisionSourceInventory = {
-			staticMeshComponents: 0, otherPrimitiveComponents: 0, unclassifiedOtherPrimitiveComponents: 0,
+			staticMeshComponents: 0, otherPrimitiveComponents: 0, unclassifiedOtherPrimitiveComponents: 0, unindexedOtherPrimitiveComponents: 0,
 			explicitlyNonQueryOtherPrimitiveComponents: 0, explicitlyNonBlockingForPawnOtherPrimitiveComponents: 0,
 			landscapeHeightfieldCollisionComponents: 0, unresolvedInstancedMeshComponents: 0, otherPrimitiveStatuses: {},
 		};
@@ -29,6 +29,7 @@ globalThis.fetch = async url => {
 			scope: 'all-collision-sources', staticMeshComponentCount: 0, unknownComponents: 0,
 			supportedSimpleShapeComponents: 0, explicitlyNonQueryCollidableComponents: 0,
 			explicitlyNonBlockingForPawnComponents: 0, staticMeshComponentsClassified: true,
+			otherPrimitiveComponentCount: 0, supportedOtherPrimitiveComponents: 0, unknownOtherPrimitiveComponents: 0,
 		} } ];
 	}
 	return new Response( JSON.stringify( payload ), { status: 200, headers: { 'Content-Type': 'application/json' } } );
